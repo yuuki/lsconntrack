@@ -43,7 +43,7 @@ func findEntryPath() string {
 
 // ParseEntries parses '/proc/net/nf_conntrack or /proc/net/ip_conntrack'.
 func ParseEntries() (map[string]int64, error) {
-	addrs, err := localIPaddrs()
+	localAddrs, err := localIPaddrs()
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func ParseEntries() (map[string]int64, error) {
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := scanner.Text()
-		for _, addr := range addrs {
+		for _, addr := range localAddrs {
 			if !strings.Contains(line, "src="+addr) {
 				continue
 			}

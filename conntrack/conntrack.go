@@ -2,6 +2,7 @@ package conntrack
 
 import (
 	"bufio"
+	"errors"
 	"net"
 	"os"
 	"strings"
@@ -31,17 +32,30 @@ func localIPaddrs() ([]string, error) {
 	return addrStrings, nil
 }
 
+func findEntryPath() string {
+	for _, path := range ConntrackPaths {
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+	return ""
+}
+
 // ParseEntries parses '/proc/net/nf_conntrack or /proc/net/ip_conntrack'.
 func ParseEntries() (map[string]int64, error) {
 	addrs, err := localIPaddrs()
 	if err != nil {
 		return nil, err
 	}
-	daddrs := make(map[string]int64)
-	f, err := os.Open(ConntrackPaths[0])
+	path := findEntryPath()
+	if path == "" {
+		return nil, errors.New("not found conntrack entries path: Please load conntrack module")
+	}
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
+	daddrs := make(map[string]int64)
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := scanner.Text()

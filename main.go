@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-var conntrack (
+const (
 	PROC_CONNTRACK = "/proc/net/ip_conntrack" // old kernel
 )
 

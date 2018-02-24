@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -10,19 +11,40 @@ import (
 
 const (
 	exitCodeOK = iota
+	exitCodeFlagParseError
 	exitCodeParseConntrackError
 )
 
 // Run execute the main process.
 // It returns exit code.
 func Run(args []string) int {
-	daddrs, err := conntrack.ParseEntries()
-	if err != nil {
-		log.Println(err)
-		return exitCodeParseConntrackError
+	var (
+		dstMode bool
+		srcMode bool
+	)
+	flags := flag.NewFlagSet("lsconntrack", flag.ContinueOnError)
+	flags.SetOutput(os.Stderr)
+	flags.Usage = func() {
+		fmt.Fprint(os.Stderr, helpText)
 	}
-	for addr, cnt := range daddrs {
-		fmt.Printf("%s %d\n", addr, cnt)
+	flags.BoolVar(&dstMode, "d", false, "")
+	flags.BoolVar(&dstMode, "dest", false, "")
+	flags.BoolVar(&srcMode, "s", false, "")
+	flags.BoolVar(&dstMode, "src", false, "")
+	if err := flags.Parse(args[1:]); err != nil {
+		return exitCodeFlagParseError
+	}
+
+	if dstMode {
+		daddrs, err := conntrack.ParseEntries()
+		if err != nil {
+			log.Println(err)
+			return exitCodeParseConntrackError
+		}
+		for addr, cnt := range daddrs {
+			fmt.Printf("%s %d\n", addr, cnt)
+		}
+	} else if srcMode {
 	}
 	return exitCodeOK
 }
@@ -30,3 +52,15 @@ func Run(args []string) int {
 func main() {
 	os.Exit(Run(os.Args))
 }
+
+var helpText = `Usage: lsconntrack [options] [entries path]
+
+  Print aggregated connections between localhost and other hosts
+
+Options:
+  --src, -s         print aggregated connections source to localhost
+  --dest, -d        print aggregated connections localhost to destination
+  --numeric, -n     show numerical addresses instead of trying to determine symbolic host, port names.
+  --version, -v		print version
+  --help, -h        print help
+`

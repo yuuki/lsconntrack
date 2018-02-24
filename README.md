@@ -4,6 +4,16 @@
 
 ## How to use
 
+```shell
+# List connections source to localhost
+lsconntrack -n -s
+```
+
+```shell
+# List connections localhost to destination
+lsconntrack -n -d
+```
+
 ## License
 
 [MIT][license]

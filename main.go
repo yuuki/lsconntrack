@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"os"
 
 	"github.com/yuuki/lsconntrack/conntrack"
@@ -42,7 +43,12 @@ func Run(args []string) int {
 			return exitCodeParseConntrackError
 		}
 		for _, stat := range openConnStat {
-			fmt.Printf("%s:%s\t%d\t%d\t%d\t%d\n", stat.Addr, stat.Port, stat.TotalInboundPackets, stat.TotalInboundBytes, stat.TotalOutboundPackets, stat.TotalOutboundBytes)
+			hostnames, _ := net.LookupAddr(stat.Addr)
+			var hostname string
+			if len(hostnames) > 0 {
+				hostname = hostnames[0]
+			}
+			fmt.Printf("%s:%s\t%s\t%d\t%d\t%d\t%d\n", stat.Addr, stat.Port, hostname, stat.TotalInboundPackets, stat.TotalInboundBytes, stat.TotalOutboundPackets, stat.TotalOutboundBytes)
 		}
 	} else if passiveMode {
 	}

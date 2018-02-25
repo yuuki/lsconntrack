@@ -124,7 +124,7 @@ func ParseEntries() (ConnStatByAddrPort, error) {
 	if err != nil {
 		return nil, err
 	}
-	dstat := ConnStatByAddrPort{}
+	openConnStat := ConnStatByAddrPort{}
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -132,12 +132,12 @@ func ParseEntries() (ConnStatByAddrPort, error) {
 		if stat == nil {
 			continue
 		}
-		dstat.insert(stat, localAddrs)
+		openConnStat.insert(stat, localAddrs)
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
-	return dstat, nil
+	return openConnStat, nil
 }
 
 func parseLine(line string) *RawConnStat {

@@ -37,26 +37,34 @@ func Run(args []string) int {
 		return exitCodeFlagParseError
 	}
 
+	var connStat conntrack.ConnStatByAddrPort
 	if openMode {
-		openConnStat, err := conntrack.ParseEntries()
+		var err error
+		connStat, err = conntrack.ParseEntries(conntrack.ConnActive)
 		if err != nil {
 			log.Println(err)
 			return exitCodeParseConntrackError
 		}
-
-		// Format in tab-separated columns with a tab stop of 8.
-		tw := tabwriter.NewWriter(os.Stdout, 0, 8, 0, '\t', 0)
-		for _, stat := range openConnStat {
-			hostnames, _ := net.LookupAddr(stat.Addr)
-			var hostname string
-			if len(hostnames) > 0 {
-				hostname = hostnames[0]
-			}
-			fmt.Fprintf(tw, "%s:%s\t%s\t%d\t%d\t%d\t%d\n", stat.Addr, stat.Port, hostname, stat.TotalInboundPackets, stat.TotalInboundBytes, stat.TotalOutboundPackets, stat.TotalOutboundBytes)
-		}
-		tw.Flush()
 	} else if passiveMode {
+		var err error
+		connStat, err = conntrack.ParseEntries(conntrack.ConnPassive)
+		if err != nil {
+			log.Println(err)
+			return exitCodeParseConntrackError
+		}
 	}
+
+	// Format in tab-separated columns with a tab stop of 8.
+	tw := tabwriter.NewWriter(os.Stdout, 0, 8, 0, '\t', 0)
+	for _, stat := range connStat {
+		hostnames, _ := net.LookupAddr(stat.Addr)
+		var hostname string
+		if len(hostnames) > 0 {
+			hostname = hostnames[0]
+		}
+		fmt.Fprintf(tw, "%s:%s\t%s\t%d\t%d\t%d\t%d\n", stat.Addr, stat.Port, hostname, stat.TotalInboundPackets, stat.TotalInboundBytes, stat.TotalOutboundPackets, stat.TotalOutboundBytes)
+	}
+	tw.Flush()
 	return exitCodeOK
 }
 

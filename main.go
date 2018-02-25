@@ -41,8 +41,8 @@ func Run(args []string) int {
 			log.Println(err)
 			return exitCodeParseConntrackError
 		}
-		for addrPort := range dstat {
-			fmt.Printf("%s\n", addrPort)
+		for _, stat := range dstat {
+			fmt.Printf("%s:%s\t%d\t%d\t%d\t%d\n", stat.Addr, stat.Port, stat.TotalInboundPackets, stat.TotalInboundBytes, stat.TotalOutboundPackets, stat.TotalOutboundBytes)
 		}
 	} else if srcMode {
 	}

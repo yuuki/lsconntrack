@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -17,8 +18,8 @@ var (
 	}
 )
 
-// ConnStat represents statistics of a connection to other host and port.
-type ConnStat struct {
+// RawConnStat represents statistics of a connection to other host and port.
+type RawConnStat struct {
 	OriginalSaddr   string
 	OriginalDaddr   string
 	OriginalSport   string
@@ -35,27 +36,52 @@ type ConnStat struct {
 
 type ConnStatByAddrPort map[string]*ConnStat
 
-func (c ConnStatByAddrPort) insert(stat *ConnStat, localAddrs []string) {
-	var destKey string
+// ConnStat represents statistics of a connection to localhost or from localhost.
+type ConnStat struct {
+	Addr                 string
+	Port                 string
+	TotalInboundPackets  int64
+	TotalInboundBytes    int64
+	TotalOutboundPackets int64
+	TotalOutboundBytes   int64
+}
+
+func (c ConnStatByAddrPort) insert(rstat *RawConnStat, localAddrs []string) {
+	var stat *ConnStat
 	for _, addr := range localAddrs {
 		// direction: from localhost to destination
-		if stat.OriginalSaddr == addr {
-			destKey = stat.OriginalDaddr + ":" + stat.OriginalDport
-		} else if stat.ReplyDaddr == addr {
-			destKey = stat.ReplySaddr + ":" + stat.ReplySport
+		if rstat.OriginalSaddr == addr {
+			stat = &ConnStat{
+				Addr:                 rstat.OriginalDaddr,
+				Port:                 rstat.OriginalDport,
+				TotalInboundPackets:  rstat.ReplyPackets,
+				TotalInboundBytes:    rstat.ReplyBytes,
+				TotalOutboundPackets: rstat.OriginalPackets,
+				TotalOutboundBytes:   rstat.OriginalBytes,
+			}
+		} else if rstat.ReplyDaddr == addr {
+			stat = &ConnStat{
+				Addr:                 rstat.ReplySaddr,
+				Port:                 rstat.ReplySport,
+				TotalInboundPackets:  rstat.ReplyPackets,
+				TotalInboundBytes:    rstat.ReplyBytes,
+				TotalOutboundPackets: rstat.OriginalPackets,
+				TotalOutboundBytes:   rstat.OriginalBytes,
+			}
 		}
 	}
-	if destKey == "" {
+	if stat == nil {
 		return
 	}
-	if _, ok := c[destKey]; !ok {
-		c[destKey] = stat
+	key := stat.Addr + ":" + stat.Port
+	if _, ok := c[key]; !ok {
+		c[key] = stat
 		return
 	}
-	// c[destKey].OriginalPackets += stat.OriginalPackets
-	// c[destKey].OriginalBytes += stat.OriginalBytes
-	// c[destKey].ReplyPackets += stat.ReplyPackets
-	// c[destKey].ReplyBytes += stat.ReplyBytes
+	c[key].TotalInboundPackets += rstat.ReplyPackets
+	c[key].TotalInboundBytes += rstat.ReplyBytes
+	c[key].TotalOutboundPackets += rstat.OriginalPackets
+	c[key].TotalOutboundBytes += rstat.OriginalBytes
 	return
 }
 
@@ -114,8 +140,8 @@ func ParseEntries() (ConnStatByAddrPort, error) {
 	return dstat, nil
 }
 
-func parseLine(line string) *ConnStat {
-	stat := &ConnStat{}
+func parseLine(line string) *RawConnStat {
+	stat := &RawConnStat{}
 	fields := strings.Fields(line)
 	if len(fields) == 0 {
 		log.Fatalf("unexpected line: %s\n", line)
@@ -129,10 +155,14 @@ func parseLine(line string) *ConnStat {
 		stat.OriginalDaddr = strings.Split(fields[5], "=")[1]
 		stat.OriginalSport = strings.Split(fields[6], "=")[1]
 		stat.OriginalDport = strings.Split(fields[7], "=")[1]
+		stat.OriginalPackets, _ = strconv.ParseInt(strings.Split(fields[8], "=")[1], 10, 64)
+		stat.OriginalBytes, _ = strconv.ParseInt(strings.Split(fields[9], "=")[1], 10, 64)
 		stat.ReplySaddr = strings.Split(fields[11], "=")[1]
 		stat.ReplyDaddr = strings.Split(fields[12], "=")[1]
 		stat.ReplySport = strings.Split(fields[13], "=")[1]
 		stat.ReplyDport = strings.Split(fields[14], "=")[1]
+		stat.ReplyPackets, _ = strconv.ParseInt(strings.Split(fields[15], "=")[1], 10, 64)
+		stat.ReplyBytes, _ = strconv.ParseInt(strings.Split(fields[16], "=")[1], 10, 64)
 		return stat
 	} else if strings.Contains(line, "ASSURED") {
 		// tcp      6 5 CLOSE src=10.0.0.10 dst=10.0.0.11 sport=41143 dport=443 packets=3 bytes=164 src=10.0.0.11 dst=10.0.0.10 sport=443 dport=41143 packets=1 bytes=60 [ASSURED] mark=0 secmark=0 use=1
@@ -140,10 +170,14 @@ func parseLine(line string) *ConnStat {
 		stat.OriginalDaddr = strings.Split(fields[5], "=")[1]
 		stat.OriginalSport = strings.Split(fields[6], "=")[1]
 		stat.OriginalDport = strings.Split(fields[7], "=")[1]
+		stat.OriginalPackets, _ = strconv.ParseInt(strings.Split(fields[8], "=")[1], 10, 64)
+		stat.OriginalBytes, _ = strconv.ParseInt(strings.Split(fields[9], "=")[1], 10, 64)
 		stat.ReplySaddr = strings.Split(fields[10], "=")[1]
 		stat.ReplyDaddr = strings.Split(fields[11], "=")[1]
 		stat.ReplySport = strings.Split(fields[12], "=")[1]
 		stat.ReplyDport = strings.Split(fields[13], "=")[1]
+		stat.ReplyPackets, _ = strconv.ParseInt(strings.Split(fields[14], "=")[1], 10, 64)
+		stat.ReplyBytes, _ = strconv.ParseInt(strings.Split(fields[15], "=")[1], 10, 64)
 		return stat
 	}
 	return nil

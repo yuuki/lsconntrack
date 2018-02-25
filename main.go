@@ -14,6 +14,7 @@ import (
 const (
 	exitCodeOK = iota
 	exitCodeFlagParseError
+	exitCodeArgumentsError
 	exitCodeParseConntrackError
 )
 
@@ -37,17 +38,24 @@ func Run(args []string) int {
 		return exitCodeFlagParseError
 	}
 
+	ports := flags.Args()
+	if len(ports) == 0 {
+		log.Println("ports required")
+		fmt.Fprint(os.Stderr, helpText)
+		return exitCodeArgumentsError
+	}
+
 	var connStat conntrack.ConnStatByAddrPort
 	if openMode {
 		var err error
-		connStat, err = conntrack.ParseEntries(conntrack.ConnActive)
+		connStat, err = conntrack.ParseEntries(conntrack.ConnActive, ports)
 		if err != nil {
 			log.Println(err)
 			return exitCodeParseConntrackError
 		}
 	} else if passiveMode {
 		var err error
-		connStat, err = conntrack.ParseEntries(conntrack.ConnPassive)
+		connStat, err = conntrack.ParseEntries(conntrack.ConnPassive, ports)
 		if err != nil {
 			log.Println(err)
 			return exitCodeParseConntrackError
@@ -72,7 +80,7 @@ func main() {
 	os.Exit(Run(os.Args))
 }
 
-var helpText = `Usage: lsconntrack [options] [-]
+var helpText = `Usage: lsconntrack [options] port...
 
   Print aggregated connections between localhost and other hosts
 
@@ -80,6 +88,7 @@ Options:
   --open, -o        print aggregated connections localhost to destination
   --passive, -p     print aggregated connections source to localhost
   --numeric, -n     show numerical addresses instead of trying to determine symbolic host, port names.
+  --stdin           input conntrack entries via stdin
   --version, -v		print version
   --help, -h        print help
 `

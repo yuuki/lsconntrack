@@ -53,13 +53,22 @@ type ConnStat struct {
 	TotalOutboundBytes   int64
 }
 
-func (c ConnStatByAddrPort) insert(rstat *RawConnStat, localAddrs []string, mode ParseMode) {
+func strContains(strs []string, s string) bool {
+	for _, str := range strs {
+		if str == s {
+			return true
+		}
+	}
+	return false
+}
+
+func (c ConnStatByAddrPort) insert(rstat *RawConnStat, localAddrs []string, mode ParseMode, ports []string) {
 	var stat *ConnStat
 	for _, addr := range localAddrs {
 		// direction: from localhost to destination
 		switch mode {
 		case ConnActive:
-			if rstat.OriginalSaddr == addr {
+			if rstat.OriginalSaddr == addr && strContains(ports, rstat.OriginalDport) {
 				stat = &ConnStat{
 					Addr:                 rstat.OriginalDaddr,
 					Port:                 rstat.OriginalDport,
@@ -68,7 +77,7 @@ func (c ConnStatByAddrPort) insert(rstat *RawConnStat, localAddrs []string, mode
 					TotalOutboundPackets: rstat.OriginalPackets,
 					TotalOutboundBytes:   rstat.OriginalBytes,
 				}
-			} else if rstat.ReplyDaddr == addr {
+			} else if rstat.ReplyDaddr == addr && strContains(ports, rstat.ReplySport) {
 				stat = &ConnStat{
 					Addr:                 rstat.ReplySaddr,
 					Port:                 rstat.ReplySport,
@@ -79,7 +88,7 @@ func (c ConnStatByAddrPort) insert(rstat *RawConnStat, localAddrs []string, mode
 				}
 			}
 		case ConnPassive:
-			if rstat.OriginalDaddr == addr {
+			if rstat.OriginalDaddr == addr && strContains(ports, rstat.OriginalDport) {
 				stat = &ConnStat{
 					Addr:                 rstat.OriginalSaddr,
 					Port:                 rstat.OriginalDport, // not OriginalSport
@@ -88,7 +97,7 @@ func (c ConnStatByAddrPort) insert(rstat *RawConnStat, localAddrs []string, mode
 					TotalOutboundPackets: rstat.ReplyPackets,
 					TotalOutboundBytes:   rstat.ReplyBytes,
 				}
-			} else if rstat.ReplySaddr == addr {
+			} else if rstat.ReplySaddr == addr && strContains(ports, rstat.ReplySport) {
 				stat = &ConnStat{
 					Addr:                 rstat.ReplyDaddr,
 					Port:                 rstat.ReplySport, // not ReplyDport
@@ -149,7 +158,7 @@ func findEntryPath() string {
 }
 
 // ParseEntries parses '/proc/net/nf_conntrack or /proc/net/ip_conntrack'.
-func ParseEntries(mode ParseMode) (ConnStatByAddrPort, error) {
+func ParseEntries(mode ParseMode, ports []string) (ConnStatByAddrPort, error) {
 	localAddrs, err := localIPaddrs()
 	if err != nil {
 		return nil, err
@@ -170,7 +179,7 @@ func ParseEntries(mode ParseMode) (ConnStatByAddrPort, error) {
 		if stat == nil {
 			continue
 		}
-		connStat.insert(stat, localAddrs, mode)
+		connStat.insert(stat, localAddrs, mode, ports)
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, err

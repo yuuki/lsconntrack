@@ -36,13 +36,13 @@ func Run(args []string) int {
 	}
 
 	if dstMode {
-		daddrs, err := conntrack.ParseEntries()
+		dstat, err := conntrack.ParseEntries()
 		if err != nil {
 			log.Println(err)
 			return exitCodeParseConntrackError
 		}
-		for addr, cnt := range daddrs {
-			fmt.Printf("%s %d\n", addr, cnt)
+		for addrPort := range dstat {
+			fmt.Printf("%s\n", addrPort)
 		}
 	} else if srcMode {
 	}
@@ -53,7 +53,7 @@ func main() {
 	os.Exit(Run(os.Args))
 }
 
-var helpText = `Usage: lsconntrack [options] [entries path]
+var helpText = `Usage: lsconntrack [options] [-]
 
   Print aggregated connections between localhost and other hosts
 

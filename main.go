@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"text/tabwriter"
 
 	"github.com/yuuki/lsconntrack/conntrack"
 )
@@ -42,14 +43,18 @@ func Run(args []string) int {
 			log.Println(err)
 			return exitCodeParseConntrackError
 		}
+
+		// Format in tab-separated columns with a tab stop of 8.
+		tw := tabwriter.NewWriter(os.Stdout, 0, 8, 0, '\t', 0)
 		for _, stat := range openConnStat {
 			hostnames, _ := net.LookupAddr(stat.Addr)
 			var hostname string
 			if len(hostnames) > 0 {
 				hostname = hostnames[0]
 			}
-			fmt.Printf("%s:%s\t%s\t%d\t%d\t%d\t%d\n", stat.Addr, stat.Port, hostname, stat.TotalInboundPackets, stat.TotalInboundBytes, stat.TotalOutboundPackets, stat.TotalOutboundBytes)
+			fmt.Fprintf(tw, "%s:%s\t%s\t%d\t%d\t%d\t%d\n", stat.Addr, stat.Port, hostname, stat.TotalInboundPackets, stat.TotalInboundBytes, stat.TotalOutboundPackets, stat.TotalOutboundBytes)
 		}
+		tw.Flush()
 	} else if passiveMode {
 	}
 	return exitCodeOK

@@ -1,5 +1,7 @@
 # lsconntrack
 
+[license]: https://github.com/yuuki/lsconntrack/blob/master/LICENSE
+
 ## Setup
 
 ## How to use

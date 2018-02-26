@@ -92,6 +92,13 @@ func (c *CLI) Run(args []string) int {
 		}
 	}
 
+	c.PrintStats(connStat)
+
+	return exitCodeOK
+}
+
+// PrintStats prints the results.
+func (c *CLI) PrintStats(connStat conntrack.ConnStatByAddrPort) {
 	// Format in tab-separated columns with a tab stop of 8.
 	tw := tabwriter.NewWriter(c.outStream, 0, 8, 0, '\t', 0)
 	for _, stat := range connStat {
@@ -103,7 +110,6 @@ func (c *CLI) Run(args []string) int {
 		fmt.Fprintf(tw, "%s:%s\t%s\t%d\t%d\t%d\t%d\n", stat.Addr, stat.Port, hostname, stat.TotalInboundPackets, stat.TotalInboundBytes, stat.TotalOutboundPackets, stat.TotalOutboundBytes)
 	}
 	tw.Flush()
-	return exitCodeOK
 }
 
 var helpText = `Usage: lsconntrack [options] port...

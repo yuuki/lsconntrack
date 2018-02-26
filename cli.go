@@ -75,24 +75,16 @@ func (c *CLI) Run(args []string) int {
 		r = f
 	}
 
-	var connStat conntrack.ConnStatByAddrPort
-	if activeMode {
-		var err error
-		connStat, err = conntrack.ParseEntries(r, conntrack.ConnActive, ports)
-		if err != nil {
-			log.Println(err)
-			return exitCodeParseConntrackError
-		}
-	} else if passiveMode {
-		var err error
-		connStat, err = conntrack.ParseEntries(r, conntrack.ConnPassive, ports)
-		if err != nil {
-			log.Println(err)
-			return exitCodeParseConntrackError
-		}
+	entries, err := conntrack.ParseEntries(r, ports)
+	if err != nil {
+		log.Println(err)
+		return exitCodeParseConntrackError
 	}
-
-	c.PrintStats(connStat)
+	if activeMode {
+		c.PrintStats(entries.Active)
+	} else if passiveMode {
+		c.PrintStats(entries.Passive)
+	}
 
 	return exitCodeOK
 }

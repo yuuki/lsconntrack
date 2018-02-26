@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -17,6 +18,7 @@ const (
 	exitCodeFlagParseError = 10 + iota
 	exitCodeArgumentsError
 	exitCodeParseConntrackError
+	exitCodePrintError
 )
 
 // CLI is the command line object.
@@ -35,6 +37,7 @@ func (c *CLI) Run(args []string) int {
 		activeMode  bool
 		passiveMode bool
 		stdin       bool
+		json        bool
 	)
 	flags := flag.NewFlagSet("lsconntrack", flag.ContinueOnError)
 	flags.SetOutput(c.errStream)
@@ -46,6 +49,7 @@ func (c *CLI) Run(args []string) int {
 	flags.BoolVar(&passiveMode, "p", false, "")
 	flags.BoolVar(&passiveMode, "passive", false, "")
 	flags.BoolVar(&stdin, "stdin", false, "")
+	flags.BoolVar(&json, "json", false, "")
 	if err := flags.Parse(args[1:]); err != nil {
 		return exitCodeFlagParseError
 	}
@@ -80,10 +84,19 @@ func (c *CLI) Run(args []string) int {
 		log.Println(err)
 		return exitCodeParseConntrackError
 	}
+	var result conntrack.ConnStatByAddrPort
 	if activeMode {
-		c.PrintStats(entries.Active)
+		result = entries.Active
 	} else if passiveMode {
-		c.PrintStats(entries.Passive)
+		result = entries.Passive
+	}
+	if json {
+		if err := c.PrintStatsJSON(result); err != nil {
+			log.Println(err)
+			return exitCodePrintError
+		}
+	} else {
+		c.PrintStats(result)
 	}
 
 	return exitCodeOK
@@ -104,6 +117,16 @@ func (c *CLI) PrintStats(connStat conntrack.ConnStatByAddrPort) {
 	tw.Flush()
 }
 
+// PrintStatsJSON prints the results as json format.
+func (c *CLI) PrintStatsJSON(connStat conntrack.ConnStatByAddrPort) error {
+	b, err := json.Marshal(connStat)
+	if err != nil {
+		return err
+	}
+	c.outStream.Write(b)
+	return nil
+}
+
 var helpText = `Usage: lsconntrack [options] port...
 
   Print aggregated connections between localhost and other hosts
@@ -113,7 +136,7 @@ Options:
   --passive, -p     print aggregated connections source to localhost
   --numeric, -n     show numerical addresses instead of trying to determine symbolic host, port names.
   --stdin           input conntrack entries via stdin
-  --json            
+  --json            print results as json format
   --version, -v		print version
   --help, -h        print help
 `

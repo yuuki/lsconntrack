@@ -1,6 +1,12 @@
 # lsconntrack
 
-[license]: https://github.com/yuuki/lsconntrack/blob/master/LICENSE
+[![Build Status](https://travis-ci.org/yuuki/lsconntrack.png?branch=master)][travis]
+[![Go Report Card](https://goreportcard.com/badge/github.com/yuuki/lsconntrack)][goreportcard]
+[license]: <https://github.com/yuuki/lsconntrack/blob/master/LICENSE>
+
+[travis]: https://travis-ci.org/yuuki/lsconntrack
+[goreportcard]: (https://goreportcard.com/report/github.com/yuuki/lsconntrack)
+
 
 ## Setup
 

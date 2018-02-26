@@ -116,6 +116,7 @@ func (c *CLI) Run(args []string) int {
 func (c *CLI) PrintStats(connStat conntrack.ConnStatByAddrPort) {
 	// Format in tab-separated columns with a tab stop of 8.
 	tw := tabwriter.NewWriter(c.outStream, 0, 8, 0, '\t', 0)
+	fmt.Fprintln(tw, "RemoteAddress:Port \tFQDN \tInpkts \tInbytes \tOutpkts \tOutbytes")
 	for _, stat := range connStat {
 		hostnames, _ := net.LookupAddr(stat.Addr)
 		var hostname string

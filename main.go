@@ -45,17 +45,29 @@ func Run(args []string) int {
 		return exitCodeArgumentsError
 	}
 
+	path := conntrack.FindEntryPath()
+	if path == "" {
+		log.Println("not found conntrack entries path: Please load conntrack module")
+		return exitCodeParseConntrackError
+	}
+	r, err := os.Open(path)
+	if err != nil {
+		log.Printf("failed to open %v: %v\n", path, err)
+		return exitCodeParseConntrackError
+	}
+	defer r.Close()
+
 	var connStat conntrack.ConnStatByAddrPort
 	if openMode {
 		var err error
-		connStat, err = conntrack.ParseEntries(conntrack.ConnActive, ports)
+		connStat, err = conntrack.ParseEntries(r, conntrack.ConnActive, ports)
 		if err != nil {
 			log.Println(err)
 			return exitCodeParseConntrackError
 		}
 	} else if passiveMode {
 		var err error
-		connStat, err = conntrack.ParseEntries(conntrack.ConnPassive, ports)
+		connStat, err = conntrack.ParseEntries(r, conntrack.ConnPassive, ports)
 		if err != nil {
 			log.Println(err)
 			return exitCodeParseConntrackError

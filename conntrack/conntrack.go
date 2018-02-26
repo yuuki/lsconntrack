@@ -45,19 +45,19 @@ type RawConnStat struct {
 type ConnStatByAddrPort map[string]*ConnStat
 
 type ConnStatEntries struct {
-	Active  ConnStatByAddrPort
-	Passive ConnStatByAddrPort
+	Active  ConnStatByAddrPort `json:"active"`
+	Passive ConnStatByAddrPort `json:"passive"`
 }
 
 // ConnStat represents statistics of a connection to localhost or from localhost.
 type ConnStat struct {
 	Mode                 ConnMode
-	Addr                 string
-	Port                 string
-	TotalInboundPackets  int64
-	TotalInboundBytes    int64
-	TotalOutboundPackets int64
-	TotalOutboundBytes   int64
+	Addr                 string `json:"addr"`
+	Port                 string `json:"port"`
+	TotalInboundPackets  int64  `json:"total_inbound_packets"`
+	TotalInboundBytes    int64  `json:"total_inbound_bytes"`
+	TotalOutboundPackets int64  `json:"total_outbound_packets"`
+	TotalOutboundBytes   int64  `json:"total_outbound_bytes"`
 }
 
 func parseRawConnStat(rstat *RawConnStat, localAddrs []string, ports []string) *ConnStat {

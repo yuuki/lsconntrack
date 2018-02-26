@@ -6,12 +6,12 @@
 
 ```shell
 # List connections source to localhost
-lsconntrack -n -s
+lsconntrack -o 3306 11211
 ```
 
 ```shell
 # List connections localhost to destination
-lsconntrack -n -d
+lsconntrack -p 80 443
 ```
 
 ## License

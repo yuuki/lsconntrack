@@ -23,7 +23,7 @@ const (
 // It returns exit code.
 func Run(args []string) int {
 	var (
-		openMode    bool
+		activeMode  bool
 		passiveMode bool
 		stdin       bool
 	)
@@ -32,8 +32,8 @@ func Run(args []string) int {
 	flags.Usage = func() {
 		fmt.Fprint(os.Stderr, helpText)
 	}
-	flags.BoolVar(&openMode, "o", false, "")
-	flags.BoolVar(&openMode, "open", false, "")
+	flags.BoolVar(&activeMode, "a", false, "")
+	flags.BoolVar(&activeMode, "active", false, "")
 	flags.BoolVar(&passiveMode, "p", false, "")
 	flags.BoolVar(&passiveMode, "passive", false, "")
 	flags.BoolVar(&stdin, "stdin", false, "")
@@ -67,7 +67,7 @@ func Run(args []string) int {
 	}
 
 	var connStat conntrack.ConnStatByAddrPort
-	if openMode {
+	if activeMode {
 		var err error
 		connStat, err = conntrack.ParseEntries(r, conntrack.ConnActive, ports)
 		if err != nil {
@@ -106,7 +106,7 @@ var helpText = `Usage: lsconntrack [options] port...
   Print aggregated connections between localhost and other hosts
 
 Options:
-  --open, -o        print aggregated connections localhost to destination
+  --active, -a      print aggregated connections localhost to destination
   --passive, -p     print aggregated connections source to localhost
   --numeric, -n     show numerical addresses instead of trying to determine symbolic host, port names.
   --stdin           input conntrack entries via stdin

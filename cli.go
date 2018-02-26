@@ -19,6 +19,7 @@ const (
 	exitCodeArgumentsError
 	exitCodeParseConntrackError
 	exitCodePrintError
+	exitCodeUnreachableError
 )
 
 // CLI is the command line object.
@@ -54,9 +55,15 @@ func (c *CLI) Run(args []string) int {
 		return exitCodeFlagParseError
 	}
 
+	if !activeMode && !passiveMode {
+		log.Println("--active or --passive required")
+		fmt.Fprint(c.errStream, helpText)
+		return exitCodeArgumentsError
+	}
+
 	ports := flags.Args()
 	if len(ports) == 0 {
-		log.Println(c.errStream, "ports required")
+		log.Println("ports required")
 		fmt.Fprint(c.errStream, helpText)
 		return exitCodeArgumentsError
 	}
@@ -89,6 +96,9 @@ func (c *CLI) Run(args []string) int {
 		result = entries.Active
 	} else if passiveMode {
 		result = entries.Passive
+	} else {
+		log.Println("unreachable code")
+		return exitCodeUnreachableError
 	}
 	if json {
 		if err := c.PrintStatsJSON(result); err != nil {

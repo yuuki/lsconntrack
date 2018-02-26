@@ -2,11 +2,14 @@ package conntrack
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"log"
 	"net"
 	"strconv"
 	"strings"
+
+	gnet "github.com/shirou/gopsutil/net"
 )
 
 type ConnMode int
@@ -169,6 +172,20 @@ func localIPaddrs() ([]string, error) {
 		}
 	}
 	return addrStrings, nil
+}
+
+func LocalListeningPorts() ([]string, error) {
+	conns, err := gnet.Connections("tcp")
+	if err != nil {
+		return nil, err
+	}
+	ports := []string{}
+	for _, conn := range conns {
+		if conn.Laddr.IP == "0.0.0.0" || conn.Laddr.IP == "127.0.0.1" || conn.Laddr.IP == "::" {
+			ports = append(ports, fmt.Sprintf("%d", conn.Laddr.Port))
+		}
+	}
+	return ports, nil
 }
 
 func parseLine(line string) *RawConnStat {

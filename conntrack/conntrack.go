@@ -53,22 +53,13 @@ type ConnStat struct {
 	TotalOutboundBytes   int64
 }
 
-func strContains(strs []string, s string) bool {
-	for _, str := range strs {
-		if str == s {
-			return true
-		}
-	}
-	return false
-}
-
 func (c ConnStatByAddrPort) insert(rstat *RawConnStat, localAddrs []string, mode ParseMode, ports []string) {
 	var stat *ConnStat
 	for _, addr := range localAddrs {
 		// direction: from localhost to destination
 		switch mode {
 		case ConnActive:
-			if rstat.OriginalSaddr == addr && strContains(ports, rstat.OriginalDport) {
+			if rstat.OriginalSaddr == addr && contains(ports, rstat.OriginalDport) {
 				stat = &ConnStat{
 					Addr:                 rstat.OriginalDaddr,
 					Port:                 rstat.OriginalDport,
@@ -77,7 +68,7 @@ func (c ConnStatByAddrPort) insert(rstat *RawConnStat, localAddrs []string, mode
 					TotalOutboundPackets: rstat.OriginalPackets,
 					TotalOutboundBytes:   rstat.OriginalBytes,
 				}
-			} else if rstat.ReplyDaddr == addr && strContains(ports, rstat.ReplySport) {
+			} else if rstat.ReplyDaddr == addr && contains(ports, rstat.ReplySport) {
 				stat = &ConnStat{
 					Addr:                 rstat.ReplySaddr,
 					Port:                 rstat.ReplySport,
@@ -88,7 +79,7 @@ func (c ConnStatByAddrPort) insert(rstat *RawConnStat, localAddrs []string, mode
 				}
 			}
 		case ConnPassive:
-			if rstat.OriginalDaddr == addr && strContains(ports, rstat.OriginalDport) {
+			if rstat.OriginalDaddr == addr && contains(ports, rstat.OriginalDport) {
 				stat = &ConnStat{
 					Addr:                 rstat.OriginalSaddr,
 					Port:                 rstat.OriginalDport, // not OriginalSport
@@ -97,7 +88,7 @@ func (c ConnStatByAddrPort) insert(rstat *RawConnStat, localAddrs []string, mode
 					TotalOutboundPackets: rstat.ReplyPackets,
 					TotalOutboundBytes:   rstat.ReplyBytes,
 				}
-			} else if rstat.ReplySaddr == addr && strContains(ports, rstat.ReplySport) {
+			} else if rstat.ReplySaddr == addr && contains(ports, rstat.ReplySport) {
 				stat = &ConnStat{
 					Addr:                 rstat.ReplyDaddr,
 					Port:                 rstat.ReplySport, // not ReplyDport

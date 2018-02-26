@@ -6,12 +6,22 @@
 
 ```shell
 # List connections source to localhost
-lsconntrack -o 3306 11211
+lsconntrack -a 3306 11211
 ```
 
 ```shell
 # List connections localhost to destination
 lsconntrack -p 80 443
+```
+
+### via stdin
+
+```shell
+sudo cat /proc/net/nf_conntrack | lsconntrack --stdin -a 3306 11211
+```
+
+```shell
+conntrack | lsconntrack --stdin -a 3306 11211
 ```
 
 ## License

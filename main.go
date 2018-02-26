@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -24,6 +25,7 @@ func Run(args []string) int {
 	var (
 		openMode    bool
 		passiveMode bool
+		stdin       bool
 	)
 	flags := flag.NewFlagSet("lsconntrack", flag.ContinueOnError)
 	flags.SetOutput(os.Stderr)
@@ -34,6 +36,7 @@ func Run(args []string) int {
 	flags.BoolVar(&openMode, "open", false, "")
 	flags.BoolVar(&passiveMode, "p", false, "")
 	flags.BoolVar(&passiveMode, "passive", false, "")
+	flags.BoolVar(&stdin, "stdin", false, "")
 	if err := flags.Parse(args[1:]); err != nil {
 		return exitCodeFlagParseError
 	}
@@ -45,17 +48,23 @@ func Run(args []string) int {
 		return exitCodeArgumentsError
 	}
 
-	path := conntrack.FindEntryPath()
-	if path == "" {
-		log.Println("not found conntrack entries path: Please load conntrack module")
-		return exitCodeParseConntrackError
+	var r io.Reader
+	if stdin {
+		r = os.Stdin
+	} else {
+		path := conntrack.FindEntryPath()
+		if path == "" {
+			log.Println("not found conntrack entries path: Please load conntrack module")
+			return exitCodeParseConntrackError
+		}
+		f, err := os.Open(path)
+		if err != nil {
+			log.Printf("failed to open %v: %v\n", path, err)
+			return exitCodeParseConntrackError
+		}
+		defer f.Close()
+		r = f
 	}
-	r, err := os.Open(path)
-	if err != nil {
-		log.Printf("failed to open %v: %v\n", path, err)
-		return exitCodeParseConntrackError
-	}
-	defer r.Close()
 
 	var connStat conntrack.ConnStatByAddrPort
 	if openMode {

@@ -65,7 +65,7 @@ func (c *CLI) Run(args []string) int {
 	if stdin {
 		r = os.Stdin
 	} else {
-		path := conntrack.FindEntryPath()
+		path := conntrack.FindProcPath()
 		if path == "" {
 			log.Println("not found conntrack entries path: Please load conntrack module")
 			return exitCodeParseConntrackError

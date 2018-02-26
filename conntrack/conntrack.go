@@ -5,7 +5,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"os"
 	"strconv"
 	"strings"
 )
@@ -16,14 +15,6 @@ const (
 	ConnOther ConnMode = iota
 	ConnActive
 	ConnPassive
-)
-
-var (
-	// ConntrackPaths are conntrack entries paths.
-	ConntrackPaths = []string{
-		"/proc/net/ip_conntrack", // old kernel
-		"/proc/net/nf_conntrack", // new kernel
-	}
 )
 
 // RawConnStat represents statistics of a connection to other host and port.
@@ -135,31 +126,6 @@ func (c *ConnStatEntries) insert(stat *ConnStat) {
 	return
 }
 
-func localIPaddrs() ([]string, error) {
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		return nil, err
-	}
-	addrStrings := make([]string, 0, len(addrs))
-	for _, a := range addrs {
-		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				addrStrings = append(addrStrings, ipnet.IP.String())
-			}
-		}
-	}
-	return addrStrings, nil
-}
-
-func FindEntryPath() string {
-	for _, path := range ConntrackPaths {
-		if _, err := os.Stat(path); err == nil {
-			return path
-		}
-	}
-	return ""
-}
-
 // ParseEntries parses '/proc/net/nf_conntrack or /proc/net/ip_conntrack'.
 func ParseEntries(r io.Reader, ports []string) (*ConnStatEntries, error) {
 	localAddrs, err := localIPaddrs()
@@ -187,6 +153,22 @@ func ParseEntries(r io.Reader, ports []string) (*ConnStatEntries, error) {
 		return nil, err
 	}
 	return entries, nil
+}
+
+func localIPaddrs() ([]string, error) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return nil, err
+	}
+	addrStrings := make([]string, 0, len(addrs))
+	for _, a := range addrs {
+		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				addrStrings = append(addrStrings, ipnet.IP.String())
+			}
+		}
+	}
+	return addrStrings, nil
 }
 
 func parseLine(line string) *RawConnStat {

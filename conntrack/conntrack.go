@@ -10,10 +10,10 @@ import (
 	"strings"
 )
 
-type ParseMode int
+type ConnMode int
 
 const (
-	ConnOther ParseMode = iota
+	ConnOther ConnMode = iota
 	ConnActive
 	ConnPassive
 )
@@ -51,7 +51,7 @@ type ConnStatEntries struct {
 
 // ConnStat represents statistics of a connection to localhost or from localhost.
 type ConnStat struct {
-	Mode                 ParseMode
+	Mode                 ConnMode
 	Addr                 string
 	Port                 string
 	TotalInboundPackets  int64
@@ -62,7 +62,7 @@ type ConnStat struct {
 
 func parseRawConnStat(rstat *RawConnStat, localAddrs []string, ports []string) *ConnStat {
 	var (
-		mode       ParseMode
+		mode       ConnMode
 		addr, port string
 	)
 	for _, localAddr := range localAddrs {

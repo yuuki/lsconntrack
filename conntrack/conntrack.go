@@ -102,7 +102,7 @@ func parseRawConnStat(rstat *RawConnStat, localAddrs []string, ports []string) *
 }
 
 func (c *ConnStatEntries) insert(stat *ConnStat) {
-	key := stat.Addr + ":" + stat.Port
+	key := net.JoinHostPort(stat.Addr, stat.Port)
 	switch stat.Mode {
 	case ConnActive:
 		if _, ok := c.Active[key]; !ok {

@@ -93,7 +93,7 @@ func (c *CLI) Run(args []string) int {
 	}
 
 	// Format in tab-separated columns with a tab stop of 8.
-	tw := tabwriter.NewWriter(os.Stdout, 0, 8, 0, '\t', 0)
+	tw := tabwriter.NewWriter(c.outStream, 0, 8, 0, '\t', 0)
 	for _, stat := range connStat {
 		hostnames, _ := net.LookupAddr(stat.Addr)
 		var hostname string
@@ -115,6 +115,7 @@ Options:
   --passive, -p     print aggregated connections source to localhost
   --numeric, -n     show numerical addresses instead of trying to determine symbolic host, port names.
   --stdin           input conntrack entries via stdin
+  --json            
   --version, -v		print version
   --help, -h        print help
 `

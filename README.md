@@ -8,22 +8,28 @@
 
 ```shell
 # List connections source to localhost
-lsconntrack -a 3306 11211
+lsconntrack --active 3306 11211
 ```
 
 ```shell
 # List connections localhost to destination
-lsconntrack -p 80 443
+lsconntrack --passive 80 443
 ```
 
 ### via stdin
 
 ```shell
-sudo cat /proc/net/nf_conntrack | lsconntrack --stdin -a 3306 11211
+cat /proc/net/nf_conntrack | lsconntrack --stdin --active 3306 11211
 ```
 
 ```shell
-conntrack | lsconntrack --stdin -a 3306 11211
+conntrack | lsconntrack --stdin --active 3306 11211
+```
+
+### json format
+
+```shell
+lsconntrack --json --active 3306 11211
 ```
 
 ## License

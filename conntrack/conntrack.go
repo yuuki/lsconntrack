@@ -203,7 +203,7 @@ func parseLine(line string) *RawConnStat {
 		stat.ReplyPackets, _ = strconv.ParseInt(strings.Split(fields[15], "=")[1], 10, 64)
 		stat.ReplyBytes, _ = strconv.ParseInt(strings.Split(fields[16], "=")[1], 10, 64)
 		return stat
-	} else if strings.Contains(line, "ASSURED") {
+	} else if strings.Contains(line, "[ASSURED]") {
 		// tcp      6 5 CLOSE src=10.0.0.10 dst=10.0.0.11 sport=41143 dport=443 packets=3 bytes=164 src=10.0.0.11 dst=10.0.0.10 sport=443 dport=41143 packets=1 bytes=60 [ASSURED] mark=0 secmark=0 use=1
 		stat.OriginalSaddr = strings.Split(fields[4], "=")[1]
 		stat.OriginalDaddr = strings.Split(fields[5], "=")[1]

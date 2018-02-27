@@ -62,11 +62,6 @@ func (c *CLI) Run(args []string) int {
 	}
 
 	ports := flags.Args()
-	if len(ports) == 0 {
-		log.Println("ports required")
-		fmt.Fprint(c.errStream, helpText)
-		return exitCodeArgumentsError
-	}
 
 	var r io.Reader
 	if stdin {
@@ -84,6 +79,16 @@ func (c *CLI) Run(args []string) int {
 		}
 		defer f.Close()
 		r = f
+	}
+
+	if passiveMode && len(ports) == 0 {
+		var err error
+		ports, err = conntrack.LocalListeningPorts()
+		if err != nil {
+			log.Printf("failed to get local listening ports: %v\n", err)
+			return exitCodeParseConntrackError
+		}
+		log.Println(ports)
 	}
 
 	entries, err := conntrack.ParseEntries(r, ports)
@@ -138,13 +143,13 @@ func (c *CLI) PrintStatsJSON(connStat conntrack.ConnStatByAddrPort) error {
 	return nil
 }
 
-var helpText = `Usage: lsconntrack [options] port...
+var helpText = `Usage: lsconntrack [options] [port...]
 
   Print aggregated connections between localhost and other hosts
 
 Options:
   --active, -a      print aggregated connections localhost to destination
-  --passive, -p     print aggregated connections source to localhost
+  --passive, -p     print aggregated connections source to localhost (adopt listening ports as default)
   --numeric, -n     show numerical addresses instead of trying to determine symbolic host, port names.
   --stdin           input conntrack entries via stdin
   --json            print results as json format

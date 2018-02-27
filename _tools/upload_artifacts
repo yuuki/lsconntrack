@@ -3,4 +3,4 @@ set -e
 
 ver=v$(gobump show -r)
 make crossbuild
-ghr --replace ${ver} dist/${ver}
+ghr -username yuuki -replace ${ver} dist/${ver}

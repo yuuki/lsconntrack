@@ -1,11 +1,12 @@
+PKG = github.com/yuuki/lsconntrack
 COMMIT = $$(git describe --tags --always)
 DATE = $$(date --utc '+%Y-%m-%d_%H:%M:%S')
-BUILD_LDFLAGS = "-X main.commit=\"$(COMMIT)\" -X main.date=\"$(DATE)\""
-RELEASE_BUILD_LDFLAGS = "$(BUILD_LDFLAGS) -s -w"
+BUILD_LDFLAGS = -X $(PKG).commit=$(COMMIT) -X $(PKG).date=$(DATE)
+RELEASE_BUILD_LDFLAGS = -s -w $(BUILD_LDFLAGS)
 
 .PHONY: build
 build:
-	go build -ldflags=$(BUILD_LDFLAGS)
+	go build -ldflags="$(BUILD_LDFLAGS)"
 
 .PHONY: test
 test:
@@ -27,10 +28,10 @@ devel-deps:
 .PHONY: crossbuild
 crossbuild: devel-deps
 	$(eval ver = $(shell gobump show -r))
-	goxz -pv=v$(ver)) -build-ldflags=$(RELEASE_BUILD_LDFLAGS) \
-	  -d=./dist/v$(shell gobump show -r) .
+	goxz -pv=v$(ver) -os=linux -arch=386,amd64 -build-ldflags="$(RELEASE_BUILD_LDFLAGS)" \
+	  -d=./dist/v$(ver)
 
 .PHONY: release
-release:
+release: devel-deps
 	_tools/release
 	_tools/upload_artifacts

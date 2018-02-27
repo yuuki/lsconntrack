@@ -39,6 +39,7 @@ func (c *CLI) Run(args []string) int {
 		passiveMode bool
 		stdin       bool
 		json        bool
+		ver         bool
 	)
 	flags := flag.NewFlagSet("lsconntrack", flag.ContinueOnError)
 	flags.SetOutput(c.errStream)
@@ -51,8 +52,14 @@ func (c *CLI) Run(args []string) int {
 	flags.BoolVar(&passiveMode, "passive", false, "")
 	flags.BoolVar(&stdin, "stdin", false, "")
 	flags.BoolVar(&json, "json", false, "")
+	flags.BoolVar(&ver, "version", false, "")
 	if err := flags.Parse(args[1:]); err != nil {
 		return exitCodeFlagParseError
+	}
+
+	if ver {
+		fmt.Fprintf(c.errStream, "%s version %s, build %s, date %s \n", name, version, commit, date)
+		return exitCodeOK
 	}
 
 	if !activeMode && !passiveMode {

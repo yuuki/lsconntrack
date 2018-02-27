@@ -143,13 +143,13 @@ func (c *CLI) PrintStatsJSON(connStat conntrack.ConnStatByAddrPort) error {
 	return nil
 }
 
-var helpText = `Usage: lsconntrack [options] port...
+var helpText = `Usage: lsconntrack [options] [port...]
 
   Print aggregated connections between localhost and other hosts
 
 Options:
   --active, -a      print aggregated connections localhost to destination
-  --passive, -p     print aggregated connections source to localhost
+  --passive, -p     print aggregated connections source to localhost (adopt listening ports as default)
   --numeric, -n     show numerical addresses instead of trying to determine symbolic host, port names.
   --stdin           input conntrack entries via stdin
   --json            print results as json format

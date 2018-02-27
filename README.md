@@ -19,7 +19,7 @@ lsconntrack --active 3306 11211
 
 ```shell
 # List connections localhost to destination
-lsconntrack --passive 80 443
+lsconntrack --passive
 ```
 
 ### via stdin

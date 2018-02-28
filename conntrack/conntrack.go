@@ -213,35 +213,73 @@ func parseLine(line string) *RawConnStat {
 	if fields[0] != "tcp" {
 		return nil
 	}
+	var packets, bytes bool
+	if strings.Contains(line, "packets=") {
+		packets = true
+	}
+	if strings.Contains(line, "bytes=") {
+		bytes = true
+	}
 	if strings.Contains(line, "[UNREPLIED]") {
 		// tcp      6 367755 ESTABLISHED src=10.0.0.1 dst=10.0.0.2 sport=3306 dport=38205 packets=1 bytes=52 [UNREPLIED] src=10.0.0.2 dst=10.0.0.1 sport=38205 dport=3306 packets=0 bytes=0 mark=0 secmark=0 use=1
-		stat.OriginalSaddr = strings.Split(fields[4], "=")[1]
-		stat.OriginalDaddr = strings.Split(fields[5], "=")[1]
-		stat.OriginalSport = strings.Split(fields[6], "=")[1]
-		stat.OriginalDport = strings.Split(fields[7], "=")[1]
-		stat.OriginalPackets, _ = strconv.ParseInt(strings.Split(fields[8], "=")[1], 10, 64)
-		stat.OriginalBytes, _ = strconv.ParseInt(strings.Split(fields[9], "=")[1], 10, 64)
-		stat.ReplySaddr = strings.Split(fields[11], "=")[1]
-		stat.ReplyDaddr = strings.Split(fields[12], "=")[1]
-		stat.ReplySport = strings.Split(fields[13], "=")[1]
-		stat.ReplyDport = strings.Split(fields[14], "=")[1]
-		stat.ReplyPackets, _ = strconv.ParseInt(strings.Split(fields[15], "=")[1], 10, 64)
-		stat.ReplyBytes, _ = strconv.ParseInt(strings.Split(fields[16], "=")[1], 10, 64)
+		i := 4
+		stat.OriginalSaddr = strings.Split(fields[i], "=")[1]
+		stat.OriginalDaddr = strings.Split(fields[i+1], "=")[1]
+		stat.OriginalSport = strings.Split(fields[i+2], "=")[1]
+		stat.OriginalDport = strings.Split(fields[i+3], "=")[1]
+		i = i + 4
+		if bytes {
+			stat.OriginalPackets, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
+			i++
+		}
+		if packets {
+			stat.OriginalBytes, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
+			i++
+		}
+		i = i + 1
+		stat.ReplySaddr = strings.Split(fields[i], "=")[1]
+		stat.ReplyDaddr = strings.Split(fields[i+1], "=")[1]
+		stat.ReplySport = strings.Split(fields[i+2], "=")[1]
+		stat.ReplyDport = strings.Split(fields[i+3], "=")[1]
+		i = i + 4
+		if packets {
+			stat.ReplyPackets, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
+			i++
+		}
+		if bytes {
+			stat.ReplyBytes, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
+			i++
+		}
 		return stat
 	} else if strings.Contains(line, "[ASSURED]") {
 		// tcp      6 5 CLOSE src=10.0.0.10 dst=10.0.0.11 sport=41143 dport=443 packets=3 bytes=164 src=10.0.0.11 dst=10.0.0.10 sport=443 dport=41143 packets=1 bytes=60 [ASSURED] mark=0 secmark=0 use=1
-		stat.OriginalSaddr = strings.Split(fields[4], "=")[1]
-		stat.OriginalDaddr = strings.Split(fields[5], "=")[1]
-		stat.OriginalSport = strings.Split(fields[6], "=")[1]
-		stat.OriginalDport = strings.Split(fields[7], "=")[1]
-		stat.OriginalPackets, _ = strconv.ParseInt(strings.Split(fields[8], "=")[1], 10, 64)
-		stat.OriginalBytes, _ = strconv.ParseInt(strings.Split(fields[9], "=")[1], 10, 64)
-		stat.ReplySaddr = strings.Split(fields[10], "=")[1]
-		stat.ReplyDaddr = strings.Split(fields[11], "=")[1]
-		stat.ReplySport = strings.Split(fields[12], "=")[1]
-		stat.ReplyDport = strings.Split(fields[13], "=")[1]
-		stat.ReplyPackets, _ = strconv.ParseInt(strings.Split(fields[14], "=")[1], 10, 64)
-		stat.ReplyBytes, _ = strconv.ParseInt(strings.Split(fields[15], "=")[1], 10, 64)
+		i := 4
+		stat.OriginalSaddr = strings.Split(fields[i], "=")[1]
+		stat.OriginalDaddr = strings.Split(fields[i+1], "=")[1]
+		stat.OriginalSport = strings.Split(fields[i+2], "=")[1]
+		stat.OriginalDport = strings.Split(fields[i+3], "=")[1]
+		i = i + 4
+		if packets {
+			stat.OriginalPackets, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
+			i++
+		}
+		if bytes {
+			stat.OriginalBytes, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
+			i++
+		}
+		stat.ReplySaddr = strings.Split(fields[i], "=")[1]
+		stat.ReplyDaddr = strings.Split(fields[i+1], "=")[1]
+		stat.ReplySport = strings.Split(fields[i+2], "=")[1]
+		stat.ReplyDport = strings.Split(fields[i+3], "=")[1]
+		i = i + 4
+		if packets {
+			stat.ReplyPackets, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
+			i++
+		}
+		if bytes {
+			stat.ReplyBytes, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
+			i++
+		}
 		return stat
 	}
 	return nil

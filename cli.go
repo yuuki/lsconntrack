@@ -95,7 +95,6 @@ func (c *CLI) Run(args []string) int {
 			log.Printf("failed to get local listening ports: %v\n", err)
 			return exitCodeParseConntrackError
 		}
-		log.Println(ports)
 	}
 
 	entries, err := conntrack.ParseEntries(r, ports)

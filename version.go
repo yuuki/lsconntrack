@@ -4,7 +4,7 @@ package main
 const name = "lsconntrack"
 
 // version is application version.
-const version = "0.1.0"
+const version = "0.1.1"
 
 // commit describes latest git commit hash.
 // This is automatically extracted by git describe --always.

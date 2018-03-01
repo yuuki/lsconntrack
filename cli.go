@@ -88,11 +88,7 @@ func (c *CLI) Run(args []string) int {
 		r = f
 	}
 
-	if activeMode && len(ports) == 0 {
-		log.Println("ports required if --active specified")
-		fmt.Fprint(c.errStream, helpText)
-		return exitCodeArgumentsError
-	} else if passiveMode && len(ports) == 0 {
+	if passiveMode && len(ports) == 0 {
 		var err error
 		ports, err = conntrack.LocalListeningPorts()
 		if err != nil {

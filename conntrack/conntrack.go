@@ -60,11 +60,12 @@ func parseRawConnStat(rstat *RawConnStat, localAddrs []string, ports []string) *
 		addr, port string
 	)
 	for _, localAddr := range localAddrs {
-		if rstat.OriginalSaddr == localAddr && contains(ports, rstat.OriginalDport) {
+		// not filter by ports on ActiveOpen connection if ports is empty
+		if rstat.OriginalSaddr == localAddr && (len(ports) == 0 || contains(ports, rstat.OriginalDport)) {
 			mode, addr, port = ConnActive, rstat.OriginalDaddr, rstat.OriginalDport
 			break
 		}
-		if rstat.ReplyDaddr == localAddr && contains(ports, rstat.ReplySport) {
+		if rstat.ReplyDaddr == localAddr && (len(ports) == 0 || contains(ports, rstat.ReplySport)) {
 			mode, addr, port = ConnActive, rstat.ReplySaddr, rstat.ReplySport
 			break
 		}

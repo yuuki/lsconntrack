@@ -2,6 +2,7 @@ package conntrack
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -84,6 +85,15 @@ func (hf HostFlows) insert(flow *HostFlow) {
 		hf[key].TotalOutboundBytes += flow.TotalOutboundBytes
 	}
 	return
+}
+
+// MarshalJSON returns list formats not map.
+func (hf HostFlows) MarshalJSON() ([]byte, error) {
+	list := make([]HostFlow, 0, len(hf))
+	for _, f := range hf {
+		list = append(list, *f)
+	}
+	return json.Marshal(list)
 }
 
 // toHostFlow converts into HostFlow.

@@ -54,8 +54,8 @@ type ConnStat struct {
 	TotalOutboundBytes   int64  `json:"total_outbound_bytes"`
 }
 
-// Dump dumps ConnStat.
-func (stat *ConnStat) Dump() string {
+// String returns the string respresentation of ConnStat.
+func (stat *ConnStat) String() string {
 	if stat.Mode == ConnActive {
 		return fmt.Sprintf("localhost\t --> \t%s:%s \t%d\t%d\t%d\t%d", stat.Addr, stat.Port, stat.TotalInboundPackets, stat.TotalInboundBytes, stat.TotalOutboundPackets, stat.TotalOutboundBytes)
 	} else if stat.Mode == ConnPassive {

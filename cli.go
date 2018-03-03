@@ -154,7 +154,7 @@ func (c *CLI) PrintStats(connStat conntrack.ConnStatByAddrPort, numeric bool, mo
 		if !numeric {
 			stat.Addr = netutil.ResolveAddr(stat.Addr)
 		}
-		fmt.Fprintln(tw, stat.Dump())
+		fmt.Fprintln(tw, stat)
 	}
 	tw.Flush()
 }

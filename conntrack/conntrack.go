@@ -3,6 +3,7 @@ package conntrack
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -20,6 +21,19 @@ const (
 	ConnActive
 	ConnPassive
 )
+
+// MarshalJSON returns human readable `mode` format.
+func (c ConnMode) MarshalJSON() ([]byte, error) {
+	switch c {
+	case ConnActive:
+		return json.Marshal("active")
+	case ConnPassive:
+		return json.Marshal("passive")
+	case ConnOther:
+		return json.Marshal("unknown")
+	}
+	return nil, errors.New("unreachable code")
+}
 
 type FilterPorts struct {
 	Active  []string

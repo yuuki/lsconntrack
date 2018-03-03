@@ -7,7 +7,16 @@
 [travis]: https://travis-ci.org/yuuki/lsconntrack
 [goreportcard]: (https://goreportcard.com/report/github.com/yuuki/lsconntrack)
 
-lsconntrack prints aggregated connections tracked by Linux netfilter conntrack and enables you to simply grasp the network relationship between localhost and other hosts.
+lsconntrack prints `host flows` (aggregated connection flows to the same source or destination ports) tracked by Linux netfilter conntrack and enables you to simply grasp the network relationship between localhost and other hosts.
+
+## Features
+
+- Distinction of `active opens` and `passive opens`
+- Print also packets and bytes of each flows (the absolute values are meaningless)
+- Go portability
+- Filter by ports (--active-ports and --passive-ports)
+- stdin support (combination with [conntrack-tools](http://conntrack-tools.netfilter.org/))
+- JSON support
 
 ## Environment
 
@@ -62,7 +71,7 @@ $ lsconntrack --active --aport 3306 --aport 11211
 $ cat /proc/net/nf_conntrack | lsconntrack --stdin
 ```
 
-### json format
+### JSON format
 
 ```shell
 $ lsconntrack --json

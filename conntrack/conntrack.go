@@ -57,9 +57,9 @@ type ConnStat struct {
 // String returns the string respresentation of ConnStat.
 func (stat *ConnStat) String() string {
 	if stat.Mode == ConnActive {
-		return fmt.Sprintf("localhost\t --> \t%s:%s \t%d\t%d\t%d\t%d", stat.Addr, stat.Port, stat.TotalInboundPackets, stat.TotalInboundBytes, stat.TotalOutboundPackets, stat.TotalOutboundBytes)
+		return fmt.Sprintf("localhost:many\t --> \t%s:%s \t%d\t%d\t%d\t%d", stat.Addr, stat.Port, stat.TotalInboundPackets, stat.TotalInboundBytes, stat.TotalOutboundPackets, stat.TotalOutboundBytes)
 	} else if stat.Mode == ConnPassive {
-		return fmt.Sprintf("localhost:%s\t <-- \t%s \t%d\t%d\t%d\t%d", stat.Port, stat.Addr, stat.TotalInboundPackets, stat.TotalInboundBytes, stat.TotalOutboundPackets, stat.TotalOutboundBytes)
+		return fmt.Sprintf("localhost:%s\t <-- \t%s:many \t%d\t%d\t%d\t%d", stat.Port, stat.Addr, stat.TotalInboundPackets, stat.TotalInboundBytes, stat.TotalOutboundPackets, stat.TotalOutboundBytes)
 	}
 	return ""
 }

@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"text/tabwriter"
 
 	"github.com/yuuki/lsconntrack/conntrack"
@@ -22,6 +23,20 @@ const (
 	exitCodeUnreachableError
 )
 
+type portslice []string
+
+func (s *portslice) String() string {
+	return fmt.Sprintf("%s", *s)
+}
+
+func (s *portslice) Set(value string) error {
+	if _, err := strconv.Atoi(value); err != nil {
+		return fmt.Errorf("%s is not number", value)
+	}
+	*s = append(*s, value)
+	return nil
+}
+
 // CLI is the command line object.
 type CLI struct {
 	// outStream and errStream are the stdout and stderr
@@ -35,10 +50,11 @@ func (c *CLI) Run(args []string) int {
 	log.SetOutput(c.errStream)
 
 	var (
-		active, passive bool
-		stdin           bool
-		json            bool
-		ver             bool
+		active, passive           bool
+		activePorts, passivePorts portslice
+		stdin                     bool
+		json                      bool
+		ver                       bool
 	)
 	flags := flag.NewFlagSet("lsconntrack", flag.ContinueOnError)
 	flags.SetOutput(c.errStream)
@@ -49,6 +65,10 @@ func (c *CLI) Run(args []string) int {
 	flags.BoolVar(&active, "active", false, "")
 	flags.BoolVar(&passive, "p", false, "")
 	flags.BoolVar(&passive, "passive", false, "")
+	flags.Var(&activePorts, "aport", "")
+	flags.Var(&activePorts, "active-port", "")
+	flags.Var(&passivePorts, "pport", "")
+	flags.Var(&passivePorts, "passive-port", "")
 	flags.BoolVar(&stdin, "stdin", false, "")
 	flags.BoolVar(&json, "json", false, "")
 	flags.BoolVar(&ver, "version", false, "")
@@ -72,8 +92,6 @@ func (c *CLI) Run(args []string) int {
 		mode = conntrack.ConnActive | conntrack.ConnPassive
 	}
 
-	ports := flags.Args()
-
 	var r io.Reader
 	if stdin {
 		r = os.Stdin
@@ -92,16 +110,19 @@ func (c *CLI) Run(args []string) int {
 		r = f
 	}
 
-	if mode&conntrack.ConnPassive != 0 && len(ports) == 0 {
+	if mode&conntrack.ConnPassive != 0 && len(passivePorts) == 0 {
 		var err error
-		ports, err = conntrack.LocalListeningPorts()
+		passivePorts, err = conntrack.LocalListeningPorts()
 		if err != nil {
 			log.Printf("failed to get local listening ports: %v\n", err)
 			return exitCodeParseConntrackError
 		}
 	}
 
-	result, err := conntrack.ParseEntries(r, ports)
+	result, err := conntrack.ParseEntries(r, conntrack.FilterPorts{
+		Active:  activePorts,
+		Passive: passivePorts,
+	})
 	if err != nil {
 		log.Println(err)
 		return exitCodeParseConntrackError

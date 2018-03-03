@@ -20,6 +20,11 @@ const (
 	ConnPassive
 )
 
+type FilterPorts struct {
+	Active  []string
+	Passive []string
+}
+
 // RawConnStat represents statistics of a connection to other host and port.
 type RawConnStat struct {
 	OriginalSaddr   string
@@ -59,26 +64,26 @@ func (stat *ConnStat) Dump(hostname string) string {
 	return ""
 }
 
-func parseRawConnStat(rstat *RawConnStat, localAddrs []string, ports []string) *ConnStat {
+func parseRawConnStat(rstat *RawConnStat, localAddrs []string, fports FilterPorts) *ConnStat {
 	var (
 		mode       ConnMode
 		addr, port string
 	)
 	for _, localAddr := range localAddrs {
 		// not filter by ports on ActiveOpen connection if ports is empty
-		if rstat.OriginalSaddr == localAddr && (len(ports) == 0 || contains(ports, rstat.OriginalDport)) {
+		if rstat.OriginalSaddr == localAddr && (len(fports.Active) == 0 || contains(fports.Active, rstat.OriginalDport)) {
 			mode, addr, port = ConnActive, rstat.OriginalDaddr, rstat.OriginalDport
 			break
 		}
-		if rstat.ReplyDaddr == localAddr && (len(ports) == 0 || contains(ports, rstat.ReplySport)) {
+		if rstat.ReplyDaddr == localAddr && (len(fports.Active) == 0 || contains(fports.Active, rstat.ReplySport)) {
 			mode, addr, port = ConnActive, rstat.ReplySaddr, rstat.ReplySport
 			break
 		}
-		if rstat.OriginalDaddr == localAddr && contains(ports, rstat.OriginalDport) {
+		if rstat.OriginalDaddr == localAddr && contains(fports.Passive, rstat.OriginalDport) {
 			mode, addr, port = ConnPassive, rstat.OriginalSaddr, rstat.OriginalDport // not OriginalSport
 			break
 		}
-		if rstat.ReplySaddr == localAddr && contains(ports, rstat.ReplySport) {
+		if rstat.ReplySaddr == localAddr && contains(fports.Passive, rstat.ReplySport) {
 			mode, addr, port = ConnPassive, rstat.ReplyDaddr, rstat.ReplySport // not ReplyDport
 			break
 		}
@@ -132,7 +137,7 @@ func (c ConnStatByAddrPort) insert(stat *ConnStat) {
 }
 
 // ParseEntries parses '/proc/net/nf_conntrack or /proc/net/ip_conntrack'.
-func ParseEntries(r io.Reader, ports []string) (ConnStatByAddrPort, error) {
+func ParseEntries(r io.Reader, fports FilterPorts) (ConnStatByAddrPort, error) {
 	localAddrs, err := localIPaddrs()
 	if err != nil {
 		return nil, err
@@ -145,7 +150,7 @@ func ParseEntries(r io.Reader, ports []string) (ConnStatByAddrPort, error) {
 		if rstat == nil {
 			continue
 		}
-		stat := parseRawConnStat(rstat, localAddrs, ports)
+		stat := parseRawConnStat(rstat, localAddrs, fports)
 		if stat == nil {
 			continue
 		}

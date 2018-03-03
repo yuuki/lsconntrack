@@ -11,7 +11,8 @@ lsconntrack prints aggregated connections tracked by Linux netfilter conntrack a
 
 ## Setup
 
-Download from https://github.com/yuuki/lsconntrack/releases .
+- Load ip_conntrack / nf_conntrack module
+- Download from https://github.com/yuuki/lsconntrack/releases .
 
 ## How to use
 

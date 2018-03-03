@@ -52,6 +52,7 @@ func (c *CLI) Run(args []string) int {
 	var (
 		active, passive           bool
 		activePorts, passivePorts portslice
+		numeric                   bool
 		stdin                     bool
 		json                      bool
 		ver                       bool
@@ -69,6 +70,8 @@ func (c *CLI) Run(args []string) int {
 	flags.Var(&activePorts, "active-port", "")
 	flags.Var(&passivePorts, "pport", "")
 	flags.Var(&passivePorts, "passive-port", "")
+	flags.BoolVar(&numeric, "n", false, "")
+	flags.BoolVar(&numeric, "numeric", false, "")
 	flags.BoolVar(&stdin, "stdin", false, "")
 	flags.BoolVar(&json, "json", false, "")
 	flags.BoolVar(&ver, "version", false, "")
@@ -128,39 +131,46 @@ func (c *CLI) Run(args []string) int {
 		return exitCodeParseConntrackError
 	}
 	if json {
-		if err := c.PrintStatsJSON(result, mode); err != nil {
+		if err := c.PrintStatsJSON(result, numeric, mode); err != nil {
 			log.Println(err)
 			return exitCodePrintError
 		}
 	} else {
-		c.PrintStats(result, mode)
+		c.PrintStats(result, numeric, mode)
 	}
 
 	return exitCodeOK
 }
 
 // PrintStats prints the results.
-func (c *CLI) PrintStats(connStat conntrack.ConnStatByAddrPort, mode conntrack.ConnMode) {
+func (c *CLI) PrintStats(connStat conntrack.ConnStatByAddrPort, numeric bool, mode conntrack.ConnMode) {
 	// Format in tab-separated columns with a tab stop of 8.
 	tw := tabwriter.NewWriter(c.outStream, 0, 8, 0, '\t', 0)
-	fmt.Fprintln(tw, "Local Address:Port\t <--> \tPeer Address:Port \tFQDN \tInpkts \tInbytes \tOutpkts \tOutbytes")
+	fmt.Fprintln(tw, "Local Address:Port\t <--> \tPeer Address:Port \tInpkts \tInbytes \tOutpkts \tOutbytes")
 	for _, stat := range connStat {
 		if stat.Mode&mode == 0 {
 			continue
 		}
-		hostnames, _ := net.LookupAddr(stat.Addr)
-		var hostname string
-		if len(hostnames) > 0 {
-			hostname = hostnames[0]
+		if !numeric {
+			hostnames, _ := net.LookupAddr(stat.Addr)
+			if len(hostnames) > 0 {
+				stat.Addr = hostnames[0]
+			}
 		}
-		fmt.Fprintln(tw, stat.Dump(hostname))
+		fmt.Fprintln(tw, stat.Dump())
 	}
 	tw.Flush()
 }
 
 // PrintStatsJSON prints the results as json format.
-func (c *CLI) PrintStatsJSON(connStat conntrack.ConnStatByAddrPort, mode conntrack.ConnMode) error {
+func (c *CLI) PrintStatsJSON(connStat conntrack.ConnStatByAddrPort, numeric bool, mode conntrack.ConnMode) error {
 	for key, stat := range connStat {
+		if !numeric {
+			hostnames, _ := net.LookupAddr(stat.Addr)
+			if len(hostnames) > 0 {
+				stat.Addr = hostnames[0]
+			}
+		}
 		if stat.Mode&mode == 0 {
 			delete(connStat, key)
 		}

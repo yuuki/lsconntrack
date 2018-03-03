@@ -25,8 +25,8 @@ type FilterPorts struct {
 	Passive []string
 }
 
-// RawConnStat represents statistics of a connection to other host and port.
-type RawConnStat struct {
+// Flow represents statistics of a connection to other host and port.
+type Flow struct {
 	OriginalSaddr   string
 	OriginalDaddr   string
 	OriginalSport   string
@@ -41,10 +41,11 @@ type RawConnStat struct {
 	ReplyBytes      int64
 }
 
-type ConnStatByAddrPort map[string]*ConnStat
+// HostFlows represents a group of host flow by unique key.
+type HostFlows map[string]*HostFlow
 
-// ConnStat represents statistics of a connection to localhost or from localhost.
-type ConnStat struct {
+// HostFlow represents statistics of a connection to localhost or from localhost.
+type HostFlow struct {
 	Mode                 ConnMode
 	Addr                 string `json:"addr"`
 	Port                 string `json:"port"`
@@ -55,36 +56,36 @@ type ConnStat struct {
 }
 
 // String returns the string respresentation of ConnStat.
-func (stat *ConnStat) String() string {
-	if stat.Mode == ConnActive {
-		return fmt.Sprintf("localhost:many\t --> \t%s:%s \t%d\t%d\t%d\t%d", stat.Addr, stat.Port, stat.TotalInboundPackets, stat.TotalInboundBytes, stat.TotalOutboundPackets, stat.TotalOutboundBytes)
-	} else if stat.Mode == ConnPassive {
-		return fmt.Sprintf("localhost:%s\t <-- \t%s:many \t%d\t%d\t%d\t%d", stat.Port, stat.Addr, stat.TotalInboundPackets, stat.TotalInboundBytes, stat.TotalOutboundPackets, stat.TotalOutboundBytes)
+func (f *HostFlow) String() string {
+	if f.Mode == ConnActive {
+		return fmt.Sprintf("localhost:many\t --> \t%s:%s \t%d\t%d\t%d\t%d", f.Addr, f.Port, f.TotalInboundPackets, f.TotalInboundBytes, f.TotalOutboundPackets, f.TotalOutboundBytes)
+	} else if f.Mode == ConnPassive {
+		return fmt.Sprintf("localhost:%s\t <-- \t%s:many \t%d\t%d\t%d\t%d", f.Port, f.Addr, f.TotalInboundPackets, f.TotalInboundBytes, f.TotalOutboundPackets, f.TotalOutboundBytes)
 	}
 	return ""
 }
 
-func parseRawConnStat(rstat *RawConnStat, localAddrs []string, fports FilterPorts) *ConnStat {
+func flow2HostFlow(f *Flow, localAddrs []string, fports FilterPorts) *HostFlow {
 	var (
 		mode       ConnMode
 		addr, port string
 	)
 	for _, localAddr := range localAddrs {
 		// not filter by ports on ActiveOpen connection if ports is empty
-		if rstat.OriginalSaddr == localAddr && (len(fports.Active) == 0 || contains(fports.Active, rstat.OriginalDport)) {
-			mode, addr, port = ConnActive, rstat.OriginalDaddr, rstat.OriginalDport
+		if f.OriginalSaddr == localAddr && (len(fports.Active) == 0 || contains(fports.Active, f.OriginalDport)) {
+			mode, addr, port = ConnActive, f.OriginalDaddr, f.OriginalDport
 			break
 		}
-		if rstat.ReplyDaddr == localAddr && (len(fports.Active) == 0 || contains(fports.Active, rstat.ReplySport)) {
-			mode, addr, port = ConnActive, rstat.ReplySaddr, rstat.ReplySport
+		if f.ReplyDaddr == localAddr && (len(fports.Active) == 0 || contains(fports.Active, f.ReplySport)) {
+			mode, addr, port = ConnActive, f.ReplySaddr, f.ReplySport
 			break
 		}
-		if rstat.OriginalDaddr == localAddr && contains(fports.Passive, rstat.OriginalDport) {
-			mode, addr, port = ConnPassive, rstat.OriginalSaddr, rstat.OriginalDport // not OriginalSport
+		if f.OriginalDaddr == localAddr && contains(fports.Passive, f.OriginalDport) {
+			mode, addr, port = ConnPassive, f.OriginalSaddr, f.OriginalDport // not OriginalSport
 			break
 		}
-		if rstat.ReplySaddr == localAddr && contains(fports.Passive, rstat.ReplySport) {
-			mode, addr, port = ConnPassive, rstat.ReplyDaddr, rstat.ReplySport // not ReplyDport
+		if f.ReplySaddr == localAddr && contains(fports.Passive, f.ReplySport) {
+			mode, addr, port = ConnPassive, f.ReplyDaddr, f.ReplySport // not ReplyDport
 			break
 		}
 	}
@@ -92,78 +93,78 @@ func parseRawConnStat(rstat *RawConnStat, localAddrs []string, fports FilterPort
 	case ConnOther:
 		return nil
 	case ConnActive:
-		return &ConnStat{
+		return &HostFlow{
 			Mode:                 ConnActive,
 			Addr:                 addr,
 			Port:                 port,
-			TotalInboundPackets:  rstat.ReplyPackets,
-			TotalInboundBytes:    rstat.ReplyBytes,
-			TotalOutboundPackets: rstat.OriginalPackets,
-			TotalOutboundBytes:   rstat.OriginalBytes,
+			TotalInboundPackets:  f.ReplyPackets,
+			TotalInboundBytes:    f.ReplyBytes,
+			TotalOutboundPackets: f.OriginalPackets,
+			TotalOutboundBytes:   f.OriginalBytes,
 		}
 	case ConnPassive:
-		return &ConnStat{
+		return &HostFlow{
 			Mode:                 ConnPassive,
 			Addr:                 addr,
 			Port:                 port,
-			TotalInboundPackets:  rstat.OriginalPackets,
-			TotalInboundBytes:    rstat.OriginalBytes,
-			TotalOutboundPackets: rstat.ReplyPackets,
-			TotalOutboundBytes:   rstat.ReplyBytes,
+			TotalInboundPackets:  f.OriginalPackets,
+			TotalInboundBytes:    f.OriginalBytes,
+			TotalOutboundPackets: f.ReplyPackets,
+			TotalOutboundBytes:   f.ReplyBytes,
 		}
 	}
 	return nil
 }
 
-func (c ConnStatByAddrPort) insert(stat *ConnStat) {
-	key := fmt.Sprintf("%d-%s", stat.Mode, net.JoinHostPort(stat.Addr, stat.Port))
-	if _, ok := c[key]; !ok {
-		c[key] = stat
+func (hf HostFlows) insert(flow *HostFlow) {
+	key := fmt.Sprintf("%d-%s", flow.Mode, net.JoinHostPort(flow.Addr, flow.Port))
+	if _, ok := hf[key]; !ok {
+		hf[key] = flow
 		return
 	}
-	switch stat.Mode {
+	switch flow.Mode {
 	case ConnActive:
-		c[key].TotalInboundPackets += stat.TotalInboundPackets
-		c[key].TotalInboundBytes += stat.TotalInboundBytes
-		c[key].TotalOutboundPackets += stat.TotalOutboundPackets
-		c[key].TotalOutboundBytes += stat.TotalOutboundBytes
+		hf[key].TotalInboundPackets += flow.TotalInboundPackets
+		hf[key].TotalInboundBytes += flow.TotalInboundBytes
+		hf[key].TotalOutboundPackets += flow.TotalOutboundPackets
+		hf[key].TotalOutboundBytes += flow.TotalOutboundBytes
 	case ConnPassive:
-		c[key].TotalInboundPackets += stat.TotalInboundPackets
-		c[key].TotalInboundBytes += stat.TotalInboundBytes
-		c[key].TotalOutboundPackets += stat.TotalOutboundPackets
-		c[key].TotalOutboundBytes += stat.TotalOutboundBytes
+		hf[key].TotalInboundPackets += flow.TotalInboundPackets
+		hf[key].TotalInboundBytes += flow.TotalInboundBytes
+		hf[key].TotalOutboundPackets += flow.TotalOutboundPackets
+		hf[key].TotalOutboundBytes += flow.TotalOutboundBytes
 	}
 	return
 }
 
 // ParseEntries parses '/proc/net/nf_conntrack or /proc/net/ip_conntrack'.
-func ParseEntries(r io.Reader, fports FilterPorts) (ConnStatByAddrPort, error) {
+func ParseEntries(r io.Reader, fports FilterPorts) (HostFlows, error) {
 	localAddrs, err := netutil.LocalIPAddrs()
 	if err != nil {
 		return nil, err
 	}
-	entries := ConnStatByAddrPort{}
+	hostFlows := HostFlows{}
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := scanner.Text()
-		rstat := parseLine(line)
-		if rstat == nil {
+		flow := parseLine(line)
+		if flow == nil {
 			continue
 		}
-		stat := parseRawConnStat(rstat, localAddrs, fports)
-		if stat == nil {
+		hostFlow := flow2HostFlow(flow, localAddrs, fports)
+		if hostFlow == nil {
 			continue
 		}
-		entries.insert(stat)
+		hostFlows.insert(hostFlow)
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
-	return entries, nil
+	return hostFlows, nil
 }
 
-func parseLine(line string) *RawConnStat {
-	stat := &RawConnStat{}
+func parseLine(line string) *Flow {
+	flow := &Flow{}
 	fields := strings.Fields(line)
 	if len(fields) == 0 {
 		log.Fatalf("unexpected line: %s\n", line)
@@ -181,64 +182,64 @@ func parseLine(line string) *RawConnStat {
 	if strings.Contains(line, "[UNREPLIED]") {
 		// tcp      6 367755 ESTABLISHED src=10.0.0.1 dst=10.0.0.2 sport=3306 dport=38205 packets=1 bytes=52 [UNREPLIED] src=10.0.0.2 dst=10.0.0.1 sport=38205 dport=3306 packets=0 bytes=0 mark=0 secmark=0 use=1
 		i := 4
-		stat.OriginalSaddr = strings.Split(fields[i], "=")[1]
-		stat.OriginalDaddr = strings.Split(fields[i+1], "=")[1]
-		stat.OriginalSport = strings.Split(fields[i+2], "=")[1]
-		stat.OriginalDport = strings.Split(fields[i+3], "=")[1]
+		flow.OriginalSaddr = strings.Split(fields[i], "=")[1]
+		flow.OriginalDaddr = strings.Split(fields[i+1], "=")[1]
+		flow.OriginalSport = strings.Split(fields[i+2], "=")[1]
+		flow.OriginalDport = strings.Split(fields[i+3], "=")[1]
 		i = i + 4
 		if bytes {
-			stat.OriginalPackets, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
+			flow.OriginalPackets, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
 			i++
 		}
 		if packets {
-			stat.OriginalBytes, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
+			flow.OriginalBytes, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
 			i++
 		}
 		i = i + 1
-		stat.ReplySaddr = strings.Split(fields[i], "=")[1]
-		stat.ReplyDaddr = strings.Split(fields[i+1], "=")[1]
-		stat.ReplySport = strings.Split(fields[i+2], "=")[1]
-		stat.ReplyDport = strings.Split(fields[i+3], "=")[1]
+		flow.ReplySaddr = strings.Split(fields[i], "=")[1]
+		flow.ReplyDaddr = strings.Split(fields[i+1], "=")[1]
+		flow.ReplySport = strings.Split(fields[i+2], "=")[1]
+		flow.ReplyDport = strings.Split(fields[i+3], "=")[1]
 		i = i + 4
 		if packets {
-			stat.ReplyPackets, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
+			flow.ReplyPackets, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
 			i++
 		}
 		if bytes {
-			stat.ReplyBytes, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
+			flow.ReplyBytes, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
 			i++
 		}
-		return stat
+		return flow
 	} else if strings.Contains(line, "[ASSURED]") {
 		// tcp      6 5 CLOSE src=10.0.0.10 dst=10.0.0.11 sport=41143 dport=443 packets=3 bytes=164 src=10.0.0.11 dst=10.0.0.10 sport=443 dport=41143 packets=1 bytes=60 [ASSURED] mark=0 secmark=0 use=1
 		i := 4
-		stat.OriginalSaddr = strings.Split(fields[i], "=")[1]
-		stat.OriginalDaddr = strings.Split(fields[i+1], "=")[1]
-		stat.OriginalSport = strings.Split(fields[i+2], "=")[1]
-		stat.OriginalDport = strings.Split(fields[i+3], "=")[1]
+		flow.OriginalSaddr = strings.Split(fields[i], "=")[1]
+		flow.OriginalDaddr = strings.Split(fields[i+1], "=")[1]
+		flow.OriginalSport = strings.Split(fields[i+2], "=")[1]
+		flow.OriginalDport = strings.Split(fields[i+3], "=")[1]
 		i = i + 4
 		if packets {
-			stat.OriginalPackets, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
+			flow.OriginalPackets, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
 			i++
 		}
 		if bytes {
-			stat.OriginalBytes, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
+			flow.OriginalBytes, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
 			i++
 		}
-		stat.ReplySaddr = strings.Split(fields[i], "=")[1]
-		stat.ReplyDaddr = strings.Split(fields[i+1], "=")[1]
-		stat.ReplySport = strings.Split(fields[i+2], "=")[1]
-		stat.ReplyDport = strings.Split(fields[i+3], "=")[1]
+		flow.ReplySaddr = strings.Split(fields[i], "=")[1]
+		flow.ReplyDaddr = strings.Split(fields[i+1], "=")[1]
+		flow.ReplySport = strings.Split(fields[i+2], "=")[1]
+		flow.ReplyDport = strings.Split(fields[i+3], "=")[1]
 		i = i + 4
 		if packets {
-			stat.ReplyPackets, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
+			flow.ReplyPackets, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
 			i++
 		}
 		if bytes {
-			stat.ReplyBytes, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
+			flow.ReplyBytes, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
 			i++
 		}
-		return stat
+		return flow
 	}
 	return nil
 }

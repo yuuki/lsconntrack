@@ -122,7 +122,7 @@ func (c *CLI) Run(args []string) int {
 		}
 	}
 
-	result, err := conntrack.ParseEntries(r, conntrack.FilterPorts{
+	flows, err := conntrack.ParseEntries(r, conntrack.FilterPorts{
 		Active:  activePorts,
 		Passive: passivePorts,
 	})
@@ -131,45 +131,45 @@ func (c *CLI) Run(args []string) int {
 		return exitCodeParseConntrackError
 	}
 	if json {
-		if err := c.PrintStatsJSON(result, numeric, mode); err != nil {
+		if err := c.PrintHostFlowsAsJSON(flows, numeric, mode); err != nil {
 			log.Println(err)
 			return exitCodePrintError
 		}
 	} else {
-		c.PrintStats(result, numeric, mode)
+		c.PrintHostFlows(flows, numeric, mode)
 	}
 
 	return exitCodeOK
 }
 
-// PrintStats prints the results.
-func (c *CLI) PrintStats(connStat conntrack.ConnStatByAddrPort, numeric bool, mode conntrack.ConnMode) {
+// PrintHostFlows prints the host flows.
+func (c *CLI) PrintHostFlows(flows conntrack.HostFlows, numeric bool, mode conntrack.ConnMode) {
 	// Format in tab-separated columns with a tab stop of 8.
 	tw := tabwriter.NewWriter(c.outStream, 0, 8, 0, '\t', 0)
 	fmt.Fprintln(tw, "Local Address:Port\t <--> \tPeer Address:Port \tInpkts \tInbytes \tOutpkts \tOutbytes")
-	for _, stat := range connStat {
-		if stat.Mode&mode == 0 {
+	for _, flow := range flows {
+		if flow.Mode&mode == 0 {
 			continue
 		}
 		if !numeric {
-			stat.Addr = netutil.ResolveAddr(stat.Addr)
+			flow.Addr = netutil.ResolveAddr(flow.Addr)
 		}
-		fmt.Fprintln(tw, stat)
+		fmt.Fprintln(tw, flow)
 	}
 	tw.Flush()
 }
 
-// PrintStatsJSON prints the results as json format.
-func (c *CLI) PrintStatsJSON(connStat conntrack.ConnStatByAddrPort, numeric bool, mode conntrack.ConnMode) error {
-	for key, stat := range connStat {
+// PrintHostFlowsAsJSON prints the host flows as json format.
+func (c *CLI) PrintHostFlowsAsJSON(flows conntrack.HostFlows, numeric bool, mode conntrack.ConnMode) error {
+	for key, flow := range flows {
 		if !numeric {
-			stat.Addr = netutil.ResolveAddr(stat.Addr)
+			flow.Addr = netutil.ResolveAddr(flow.Addr)
 		}
-		if stat.Mode&mode == 0 {
-			delete(connStat, key)
+		if flow.Mode&mode == 0 {
+			delete(flows, key)
 		}
 	}
-	b, err := json.Marshal(connStat)
+	b, err := json.Marshal(flows)
 	if err != nil {
 		return err
 	}
@@ -179,12 +179,12 @@ func (c *CLI) PrintStatsJSON(connStat conntrack.ConnStatByAddrPort, numeric bool
 
 var helpText = `Usage: lsconntrack [options]
 
-  Print aggregated connections between localhost and other hosts
+  Print host flows between localhost and other hosts
 
 Options:
-  --active, -a              print aggregated connections localhost to destination
-  --passive, -p             print aggregated connections source to localhost (adopt listening ports as default)
-  --active-port, --aport    output filter by active open destination ports
+  --active, -a              print active-open host flows (from localhost to other host).
+  --passive, -p             print passive-open host flows (from other host to localhost).
+  --active-port, --aport    output filter by active-open destination ports
   --passive-port, --pport   output filter by localhost listening ports (default: all listening local ports)
   --numeric, -n             show numerical addresses instead of trying to determine symbolic host, port names.
   --stdin                   input conntrack entries via stdin

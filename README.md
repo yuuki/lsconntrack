@@ -17,6 +17,7 @@ lsconntrack prints `host flows` (aggregated connection flows to the same source 
 - Filter by ports (--active-ports and --passive-ports)
 - stdin support (combination with [conntrack-tools](http://conntrack-tools.netfilter.org/))
 - JSON support
+- TCP support only
 
 ## Environment
 

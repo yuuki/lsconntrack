@@ -40,8 +40,8 @@ localhost:many       -->    10.0.1.20:8080		    123     169638	    62      3580
 # Prints passive open connections from destination hosts to localhost.
 $ lsconntrack --passive
 Local Address:Port	 <--> 	Peer Address:Port 		Inpkts 	Inbytes     Outpkts Outbytes
-localhost:80         <--    10.0.2.10:80			23	    6416	    25	    25460
-localhost:80         <--    10.0.2.11:80			38	    8574	    34	    32752
+localhost:80         <--    10.0.2.10:many			23	    6416	    25	    25460
+localhost:80         <--    10.0.2.11:many			38	    8574	    34	    32752
 ...
 ```
 

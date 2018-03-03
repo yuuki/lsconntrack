@@ -41,9 +41,6 @@ type Flow struct {
 	ReplyBytes      int64
 }
 
-// HostFlows represents a group of host flow by unique key.
-type HostFlows map[string]*HostFlow
-
 // HostFlow represents statistics of a connection to localhost or from localhost.
 type HostFlow struct {
 	Mode                 ConnMode
@@ -65,7 +62,32 @@ func (f *HostFlow) String() string {
 	return ""
 }
 
-func flow2HostFlow(f *Flow, localAddrs []string, fports FilterPorts) *HostFlow {
+// HostFlows represents a group of host flow by unique key.
+type HostFlows map[string]*HostFlow
+
+func (hf HostFlows) insert(flow *HostFlow) {
+	key := fmt.Sprintf("%d-%s", flow.Mode, net.JoinHostPort(flow.Addr, flow.Port))
+	if _, ok := hf[key]; !ok {
+		hf[key] = flow
+		return
+	}
+	switch flow.Mode {
+	case ConnActive:
+		hf[key].TotalInboundPackets += flow.TotalInboundPackets
+		hf[key].TotalInboundBytes += flow.TotalInboundBytes
+		hf[key].TotalOutboundPackets += flow.TotalOutboundPackets
+		hf[key].TotalOutboundBytes += flow.TotalOutboundBytes
+	case ConnPassive:
+		hf[key].TotalInboundPackets += flow.TotalInboundPackets
+		hf[key].TotalInboundBytes += flow.TotalInboundBytes
+		hf[key].TotalOutboundPackets += flow.TotalOutboundPackets
+		hf[key].TotalOutboundBytes += flow.TotalOutboundBytes
+	}
+	return
+}
+
+// toHostFlow converts into HostFlow.
+func (f *Flow) toHostFlow(localAddrs []string, fports FilterPorts) *HostFlow {
 	var (
 		mode       ConnMode
 		addr, port string
@@ -114,53 +136,6 @@ func flow2HostFlow(f *Flow, localAddrs []string, fports FilterPorts) *HostFlow {
 		}
 	}
 	return nil
-}
-
-func (hf HostFlows) insert(flow *HostFlow) {
-	key := fmt.Sprintf("%d-%s", flow.Mode, net.JoinHostPort(flow.Addr, flow.Port))
-	if _, ok := hf[key]; !ok {
-		hf[key] = flow
-		return
-	}
-	switch flow.Mode {
-	case ConnActive:
-		hf[key].TotalInboundPackets += flow.TotalInboundPackets
-		hf[key].TotalInboundBytes += flow.TotalInboundBytes
-		hf[key].TotalOutboundPackets += flow.TotalOutboundPackets
-		hf[key].TotalOutboundBytes += flow.TotalOutboundBytes
-	case ConnPassive:
-		hf[key].TotalInboundPackets += flow.TotalInboundPackets
-		hf[key].TotalInboundBytes += flow.TotalInboundBytes
-		hf[key].TotalOutboundPackets += flow.TotalOutboundPackets
-		hf[key].TotalOutboundBytes += flow.TotalOutboundBytes
-	}
-	return
-}
-
-// ParseEntries parses '/proc/net/nf_conntrack or /proc/net/ip_conntrack'.
-func ParseEntries(r io.Reader, fports FilterPorts) (HostFlows, error) {
-	localAddrs, err := netutil.LocalIPAddrs()
-	if err != nil {
-		return nil, err
-	}
-	hostFlows := HostFlows{}
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		line := scanner.Text()
-		flow := parseLine(line)
-		if flow == nil {
-			continue
-		}
-		hostFlow := flow2HostFlow(flow, localAddrs, fports)
-		if hostFlow == nil {
-			continue
-		}
-		hostFlows.insert(hostFlow)
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-	return hostFlows, nil
 }
 
 func parseLine(line string) *Flow {
@@ -242,4 +217,30 @@ func parseLine(line string) *Flow {
 		return flow
 	}
 	return nil
+}
+
+// ParseEntries parses '/proc/net/nf_conntrack or /proc/net/ip_conntrack'.
+func ParseEntries(r io.Reader, fports FilterPorts) (HostFlows, error) {
+	localAddrs, err := netutil.LocalIPAddrs()
+	if err != nil {
+		return nil, err
+	}
+	hostFlows := HostFlows{}
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		line := scanner.Text()
+		flow := parseLine(line)
+		if flow == nil {
+			continue
+		}
+		hostFlow := flow.toHostFlow(localAddrs, fports)
+		if hostFlow == nil {
+			continue
+		}
+		hostFlows.insert(hostFlow)
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return hostFlows, nil
 }

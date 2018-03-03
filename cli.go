@@ -68,6 +68,12 @@ func (c *CLI) Run(args []string) int {
 		return exitCodeArgumentsError
 	}
 
+	if activeMode && passiveMode {
+		log.Println("cannot specify the both --active and --passive")
+		fmt.Fprint(c.errStream, helpText)
+		return exitCodeArgumentsError
+	}
+
 	var mode conntrack.ConnMode
 	if activeMode {
 		mode = conntrack.ConnActive

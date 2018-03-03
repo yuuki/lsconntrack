@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net"
 	"os"
 	"strconv"
 	"text/tabwriter"
 
 	"github.com/yuuki/lsconntrack/conntrack"
+	"github.com/yuuki/lsconntrack/netutil"
 )
 
 const (
@@ -152,10 +152,7 @@ func (c *CLI) PrintStats(connStat conntrack.ConnStatByAddrPort, numeric bool, mo
 			continue
 		}
 		if !numeric {
-			hostnames, _ := net.LookupAddr(stat.Addr)
-			if len(hostnames) > 0 {
-				stat.Addr = hostnames[0]
-			}
+			stat.Addr = netutil.ResolveAddr(stat.Addr)
 		}
 		fmt.Fprintln(tw, stat.Dump())
 	}
@@ -166,10 +163,7 @@ func (c *CLI) PrintStats(connStat conntrack.ConnStatByAddrPort, numeric bool, mo
 func (c *CLI) PrintStatsJSON(connStat conntrack.ConnStatByAddrPort, numeric bool, mode conntrack.ConnMode) error {
 	for key, stat := range connStat {
 		if !numeric {
-			hostnames, _ := net.LookupAddr(stat.Addr)
-			if len(hostnames) > 0 {
-				stat.Addr = hostnames[0]
-			}
+			stat.Addr = netutil.ResolveAddr(stat.Addr)
 		}
 		if stat.Mode&mode == 0 {
 			delete(connStat, key)

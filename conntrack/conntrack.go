@@ -54,6 +54,16 @@ type ConnStat struct {
 	TotalOutboundBytes   int64  `json:"total_outbound_bytes"`
 }
 
+// Dump dumps ConnStat.
+func (stat *ConnStat) Dump(hostname string) string {
+	if stat.Mode == ConnActive {
+		return fmt.Sprintf("localhost\t --> \t%s:%s \t%s\t%d\t%d\t%d\t%d", stat.Addr, stat.Port, hostname, stat.TotalInboundPackets, stat.TotalInboundBytes, stat.TotalOutboundPackets, stat.TotalOutboundBytes)
+	} else if stat.Mode == ConnPassive {
+		return fmt.Sprintf("localhost:%s\t <-- \t%s \t%s\t%d\t%d\t%d\t%d", stat.Port, stat.Addr, hostname, stat.TotalInboundPackets, stat.TotalInboundBytes, stat.TotalOutboundPackets, stat.TotalOutboundBytes)
+	}
+	return ""
+}
+
 func parseRawConnStat(rstat *RawConnStat, localAddrs []string, ports []string) *ConnStat {
 	var (
 		mode       ConnMode

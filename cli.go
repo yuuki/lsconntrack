@@ -127,14 +127,14 @@ func (c *CLI) Run(args []string) int {
 func (c *CLI) PrintStats(connStat conntrack.ConnStatByAddrPort) {
 	// Format in tab-separated columns with a tab stop of 8.
 	tw := tabwriter.NewWriter(c.outStream, 0, 8, 0, '\t', 0)
-	fmt.Fprintln(tw, "RemoteAddress:Port \tFQDN \tInpkts \tInbytes \tOutpkts \tOutbytes")
+	fmt.Fprintln(tw, "Local Address:Port\t <--> \tPeer Address:Port \tFQDN \tInpkts \tInbytes \tOutpkts \tOutbytes")
 	for _, stat := range connStat {
 		hostnames, _ := net.LookupAddr(stat.Addr)
 		var hostname string
 		if len(hostnames) > 0 {
 			hostname = hostnames[0]
 		}
-		fmt.Fprintf(tw, "%s:%s\t%s\t%d\t%d\t%d\t%d\n", stat.Addr, stat.Port, hostname, stat.TotalInboundPackets, stat.TotalInboundBytes, stat.TotalOutboundPackets, stat.TotalOutboundBytes)
+		fmt.Fprintln(tw, stat.Dump(hostname))
 	}
 	tw.Flush()
 }

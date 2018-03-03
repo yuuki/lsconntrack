@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	gnet "github.com/shirou/gopsutil/net"
+	"github.com/yuuki/lsconntrack/netutil"
 )
 
 type ConnMode int
@@ -138,7 +138,7 @@ func (c ConnStatByAddrPort) insert(stat *ConnStat) {
 
 // ParseEntries parses '/proc/net/nf_conntrack or /proc/net/ip_conntrack'.
 func ParseEntries(r io.Reader, fports FilterPorts) (ConnStatByAddrPort, error) {
-	localAddrs, err := localIPaddrs()
+	localAddrs, err := netutil.LocalIPAddrs()
 	if err != nil {
 		return nil, err
 	}
@@ -160,52 +160,6 @@ func ParseEntries(r io.Reader, fports FilterPorts) (ConnStatByAddrPort, error) {
 		return nil, err
 	}
 	return entries, nil
-}
-
-func localIPaddrs() ([]string, error) {
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		return nil, err
-	}
-	addrStrings := make([]string, 0, len(addrs))
-	for _, a := range addrs {
-		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				addrStrings = append(addrStrings, ipnet.IP.String())
-			}
-		}
-	}
-	return addrStrings, nil
-}
-
-// LocalListeningPorts returns the local listening ports.
-// eg. [199, 111, 46131, 53, 8953, 25, 2812, 80, 8081, 22]
-// -----------------------------------------------------------------------------------
-// [y_uuki@host ~]$ netstat -tln
-// Active Internet connections (only servers)
-// Proto Recv-Q Send-Q Local Address               Foreign Address             State
-// tcp        0      0 0.0.0.0:199                 0.0.0.0:*                   LISTEN
-// tcp        0      0 0.0.0.0:111                 0.0.0.0:*                   LISTEN
-// tcp        0      0 0.0.0.0:46131               0.0.0.0:*                   LISTEN
-// tcp        0      0 127.0.0.1:53                0.0.0.0:*                   LISTEN
-// tcp        0      0 127.0.0.1:8953              0.0.0.0:*                   LISTEN
-// tcp        0      0 127.0.0.1:25                0.0.0.0:*                   LISTEN
-// tcp        0      0 0.0.0.0:2812                0.0.0.0:*                   LISTEN
-// tcp        0      0 :::80                       :::*                        LISTEN
-// tcp        0      0 :::8081                     :::*                        LISTEN
-// tcp        0      0 :::22                       :::*                        LISTEN
-func LocalListeningPorts() ([]string, error) {
-	conns, err := gnet.Connections("tcp")
-	if err != nil {
-		return nil, err
-	}
-	ports := []string{}
-	for _, conn := range conns {
-		if conn.Laddr.IP == "0.0.0.0" || conn.Laddr.IP == "127.0.0.1" || conn.Laddr.IP == "::" {
-			ports = append(ports, fmt.Sprintf("%d", conn.Laddr.Port))
-		}
-	}
-	return ports, nil
 }
 
 func parseLine(line string) *RawConnStat {

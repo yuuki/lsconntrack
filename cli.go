@@ -99,7 +99,7 @@ func (c *CLI) Run(args []string) int {
 	if stdin {
 		r = os.Stdin
 	} else {
-		path := conntrack.FindProcPath()
+		path := netutil.FindConntrackPath()
 		if path == "" {
 			log.Println("not found conntrack entries path: Please load conntrack module")
 			return exitCodeParseConntrackError
@@ -115,7 +115,7 @@ func (c *CLI) Run(args []string) int {
 
 	if mode&conntrack.ConnPassive != 0 && len(passivePorts) == 0 {
 		var err error
-		passivePorts, err = conntrack.LocalListeningPorts()
+		passivePorts, err = netutil.LocalListeningPorts()
 		if err != nil {
 			log.Printf("failed to get local listening ports: %v\n", err)
 			return exitCodeParseConntrackError

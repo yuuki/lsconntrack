@@ -2,16 +2,6 @@ package conntrack
 
 import "testing"
 
-func TestLocalIPAddrss(t *testing.T) {
-	addrs, err := localIPaddrs()
-	if err != nil {
-		t.Fatalf("should not raise error: %v", err)
-	}
-	if len(addrs) == 0 {
-		t.Error("localIPAddrs() should not be len == 0")
-	}
-}
-
 func TestParseLine(t *testing.T) {
 	t.Run("[UNREPLIRED]", func(t *testing.T) {
 		line := "tcp      6 367755 ESTABLISHED src=10.0.0.1 dst=10.0.0.2 sport=3306 dport=38205 packets=1 bytes=52 [UNREPLIED] src=10.0.0.2 dst=10.0.0.1 sport=38205 dport=3306 packets=0 bytes=0 mark=0 secmark=0 use=1"

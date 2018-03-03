@@ -9,6 +9,11 @@
 
 lsconntrack prints aggregated connections tracked by Linux netfilter conntrack and enables you to simply grasp the network relationship between localhost and other hosts.
 
+## Environment
+
+- Linux only
+  - Tested on CentOS5, Debian7, Debian8
+
 ## Setup
 
 - Load ip_conntrack / nf_conntrack module

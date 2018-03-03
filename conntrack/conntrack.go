@@ -116,7 +116,7 @@ func parseRawConnStat(rstat *RawConnStat, localAddrs []string, fports FilterPort
 }
 
 func (c ConnStatByAddrPort) insert(stat *ConnStat) {
-	key := fmt.Sprintf("%s-%s", stat.Mode, net.JoinHostPort(stat.Addr, stat.Port))
+	key := fmt.Sprintf("%d-%s", stat.Mode, net.JoinHostPort(stat.Addr, stat.Port))
 	if _, ok := c[key]; !ok {
 		c[key] = stat
 		return

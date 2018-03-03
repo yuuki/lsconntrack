@@ -68,6 +68,22 @@ func (c *CLI) Run(args []string) int {
 		return exitCodeArgumentsError
 	}
 
+	if activeMode && passiveMode {
+		log.Println("cannot specify the both --active and --passive")
+		fmt.Fprint(c.errStream, helpText)
+		return exitCodeArgumentsError
+	}
+
+	var mode conntrack.ConnMode
+	if activeMode {
+		mode = conntrack.ConnActive
+	} else if passiveMode {
+		mode = conntrack.ConnPassive
+	} else {
+		// unreachable
+		mode = conntrack.ConnOther
+	}
+
 	ports := flags.Args()
 
 	var r io.Reader
@@ -97,38 +113,32 @@ func (c *CLI) Run(args []string) int {
 		}
 	}
 
-	entries, err := conntrack.ParseEntries(r, ports)
+	result, err := conntrack.ParseEntries(r, ports)
 	if err != nil {
 		log.Println(err)
 		return exitCodeParseConntrackError
 	}
-	var result conntrack.ConnStatByAddrPort
-	if activeMode {
-		result = entries.Active
-	} else if passiveMode {
-		result = entries.Passive
-	} else {
-		log.Println("unreachable code")
-		return exitCodeUnreachableError
-	}
 	if json {
-		if err := c.PrintStatsJSON(result); err != nil {
+		if err := c.PrintStatsJSON(result, mode); err != nil {
 			log.Println(err)
 			return exitCodePrintError
 		}
 	} else {
-		c.PrintStats(result)
+		c.PrintStats(result, mode)
 	}
 
 	return exitCodeOK
 }
 
 // PrintStats prints the results.
-func (c *CLI) PrintStats(connStat conntrack.ConnStatByAddrPort) {
+func (c *CLI) PrintStats(connStat conntrack.ConnStatByAddrPort, mode conntrack.ConnMode) {
 	// Format in tab-separated columns with a tab stop of 8.
 	tw := tabwriter.NewWriter(c.outStream, 0, 8, 0, '\t', 0)
 	fmt.Fprintln(tw, "Local Address:Port\t <--> \tPeer Address:Port \tFQDN \tInpkts \tInbytes \tOutpkts \tOutbytes")
 	for _, stat := range connStat {
+		if stat.Mode != mode {
+			continue
+		}
 		hostnames, _ := net.LookupAddr(stat.Addr)
 		var hostname string
 		if len(hostnames) > 0 {
@@ -140,7 +150,12 @@ func (c *CLI) PrintStats(connStat conntrack.ConnStatByAddrPort) {
 }
 
 // PrintStatsJSON prints the results as json format.
-func (c *CLI) PrintStatsJSON(connStat conntrack.ConnStatByAddrPort) error {
+func (c *CLI) PrintStatsJSON(connStat conntrack.ConnStatByAddrPort, mode conntrack.ConnMode) error {
+	for key, stat := range connStat {
+		if stat.Mode != mode {
+			delete(connStat, key)
+		}
+	}
 	b, err := json.Marshal(connStat)
 	if err != nil {
 		return err

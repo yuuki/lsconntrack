@@ -38,11 +38,6 @@ type RawConnStat struct {
 
 type ConnStatByAddrPort map[string]*ConnStat
 
-type ConnStatEntries struct {
-	Active  ConnStatByAddrPort `json:"active"`
-	Passive ConnStatByAddrPort `json:"passive"`
-}
-
 // ConnStat represents statistics of a connection to localhost or from localhost.
 type ConnStat struct {
 	Mode                 ConnMode
@@ -115,41 +110,34 @@ func parseRawConnStat(rstat *RawConnStat, localAddrs []string, ports []string) *
 	return nil
 }
 
-func (c *ConnStatEntries) insert(stat *ConnStat) {
-	key := net.JoinHostPort(stat.Addr, stat.Port)
+func (c ConnStatByAddrPort) insert(stat *ConnStat) {
+	key := fmt.Sprintf("%s-%s", stat.Mode, net.JoinHostPort(stat.Addr, stat.Port))
+	if _, ok := c[key]; !ok {
+		c[key] = stat
+		return
+	}
 	switch stat.Mode {
 	case ConnActive:
-		if _, ok := c.Active[key]; !ok {
-			c.Active[key] = stat
-			return
-		}
-		c.Active[key].TotalInboundPackets += stat.TotalInboundPackets
-		c.Active[key].TotalInboundBytes += stat.TotalInboundBytes
-		c.Active[key].TotalOutboundPackets += stat.TotalOutboundPackets
-		c.Active[key].TotalOutboundBytes += stat.TotalOutboundBytes
+		c[key].TotalInboundPackets += stat.TotalInboundPackets
+		c[key].TotalInboundBytes += stat.TotalInboundBytes
+		c[key].TotalOutboundPackets += stat.TotalOutboundPackets
+		c[key].TotalOutboundBytes += stat.TotalOutboundBytes
 	case ConnPassive:
-		if _, ok := c.Passive[key]; !ok {
-			c.Passive[key] = stat
-			return
-		}
-		c.Passive[key].TotalInboundPackets += stat.TotalInboundPackets
-		c.Passive[key].TotalInboundBytes += stat.TotalInboundBytes
-		c.Passive[key].TotalOutboundPackets += stat.TotalOutboundPackets
-		c.Passive[key].TotalOutboundBytes += stat.TotalOutboundBytes
+		c[key].TotalInboundPackets += stat.TotalInboundPackets
+		c[key].TotalInboundBytes += stat.TotalInboundBytes
+		c[key].TotalOutboundPackets += stat.TotalOutboundPackets
+		c[key].TotalOutboundBytes += stat.TotalOutboundBytes
 	}
 	return
 }
 
 // ParseEntries parses '/proc/net/nf_conntrack or /proc/net/ip_conntrack'.
-func ParseEntries(r io.Reader, ports []string) (*ConnStatEntries, error) {
+func ParseEntries(r io.Reader, ports []string) (ConnStatByAddrPort, error) {
 	localAddrs, err := localIPaddrs()
 	if err != nil {
 		return nil, err
 	}
-	entries := &ConnStatEntries{
-		Active:  ConnStatByAddrPort{},
-		Passive: ConnStatByAddrPort{},
-	}
+	entries := ConnStatByAddrPort{}
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := scanner.Text()

@@ -35,21 +35,20 @@ func (c *CLI) Run(args []string) int {
 	log.SetOutput(c.errStream)
 
 	var (
-		activeMode  bool
-		passiveMode bool
-		stdin       bool
-		json        bool
-		ver         bool
+		active, passive bool
+		stdin           bool
+		json            bool
+		ver             bool
 	)
 	flags := flag.NewFlagSet("lsconntrack", flag.ContinueOnError)
 	flags.SetOutput(c.errStream)
 	flags.Usage = func() {
 		fmt.Fprint(c.errStream, helpText)
 	}
-	flags.BoolVar(&activeMode, "a", false, "")
-	flags.BoolVar(&activeMode, "active", false, "")
-	flags.BoolVar(&passiveMode, "p", false, "")
-	flags.BoolVar(&passiveMode, "passive", false, "")
+	flags.BoolVar(&active, "a", false, "")
+	flags.BoolVar(&active, "active", false, "")
+	flags.BoolVar(&passive, "p", false, "")
+	flags.BoolVar(&passive, "passive", false, "")
 	flags.BoolVar(&stdin, "stdin", false, "")
 	flags.BoolVar(&json, "json", false, "")
 	flags.BoolVar(&ver, "version", false, "")
@@ -62,26 +61,15 @@ func (c *CLI) Run(args []string) int {
 		return exitCodeOK
 	}
 
-	if !activeMode && !passiveMode {
-		log.Println("--active or --passive required")
-		fmt.Fprint(c.errStream, helpText)
-		return exitCodeArgumentsError
-	}
-
-	if activeMode && passiveMode {
-		log.Println("cannot specify the both --active and --passive")
-		fmt.Fprint(c.errStream, helpText)
-		return exitCodeArgumentsError
-	}
-
 	var mode conntrack.ConnMode
-	if activeMode {
-		mode = conntrack.ConnActive
-	} else if passiveMode {
-		mode = conntrack.ConnPassive
-	} else {
-		// unreachable
-		mode = conntrack.ConnOther
+	if active {
+		mode |= conntrack.ConnActive
+	}
+	if passive {
+		mode |= conntrack.ConnPassive
+	}
+	if !active && !passive {
+		mode = conntrack.ConnActive | conntrack.ConnPassive
 	}
 
 	ports := flags.Args()
@@ -104,7 +92,7 @@ func (c *CLI) Run(args []string) int {
 		r = f
 	}
 
-	if passiveMode && len(ports) == 0 {
+	if mode&conntrack.ConnPassive != 0 && len(ports) == 0 {
 		var err error
 		ports, err = conntrack.LocalListeningPorts()
 		if err != nil {
@@ -136,7 +124,7 @@ func (c *CLI) PrintStats(connStat conntrack.ConnStatByAddrPort, mode conntrack.C
 	tw := tabwriter.NewWriter(c.outStream, 0, 8, 0, '\t', 0)
 	fmt.Fprintln(tw, "Local Address:Port\t <--> \tPeer Address:Port \tFQDN \tInpkts \tInbytes \tOutpkts \tOutbytes")
 	for _, stat := range connStat {
-		if stat.Mode != mode {
+		if stat.Mode&mode == 0 {
 			continue
 		}
 		hostnames, _ := net.LookupAddr(stat.Addr)
@@ -152,7 +140,7 @@ func (c *CLI) PrintStats(connStat conntrack.ConnStatByAddrPort, mode conntrack.C
 // PrintStatsJSON prints the results as json format.
 func (c *CLI) PrintStatsJSON(connStat conntrack.ConnStatByAddrPort, mode conntrack.ConnMode) error {
 	for key, stat := range connStat {
-		if stat.Mode != mode {
+		if stat.Mode&mode == 0 {
 			delete(connStat, key)
 		}
 	}

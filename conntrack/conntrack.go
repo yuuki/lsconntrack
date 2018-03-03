@@ -15,7 +15,7 @@ import (
 type ConnMode int
 
 const (
-	ConnOther ConnMode = iota
+	ConnOther ConnMode = 1 << iota
 	ConnActive
 	ConnPassive
 )

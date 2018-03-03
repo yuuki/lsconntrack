@@ -15,12 +15,6 @@ func TestRun_global(t *testing.T) {
 		expectedSubErr string
 	}{
 		{
-			desc:           "no arg",
-			arg:            "lsconntrack",
-			expectedStatus: exitCodeArgumentsError,
-			expectedSubErr: "Usage: lsconntrack",
-		},
-		{
 			desc:           "undefined flag",
 			arg:            "lsconntrack --undefined",
 			expectedStatus: exitCodeFlagParseError,

@@ -59,12 +59,12 @@ type Flow struct {
 // HostFlow represents statistics of a connection to localhost or from localhost.
 type HostFlow struct {
 	Mode                 ConnMode
-	Addr                 string `json:"addr"`
-	Port                 string `json:"port"`
-	TotalInboundPackets  int64  `json:"total_inbound_packets"`
-	TotalInboundBytes    int64  `json:"total_inbound_bytes"`
-	TotalOutboundPackets int64  `json:"total_outbound_packets"`
-	TotalOutboundBytes   int64  `json:"total_outbound_bytes"`
+	Addr                 string
+	Port                 string
+	TotalInboundPackets  int64
+	TotalInboundBytes    int64
+	TotalOutboundPackets int64
+	TotalOutboundBytes   int64
 }
 
 // String returns the string respresentation of ConnStat.
@@ -75,6 +75,44 @@ func (f *HostFlow) String() string {
 		return fmt.Sprintf("localhost:%s\t <-- \t%s:many \t%d\t%d\t%d\t%d", f.Port, f.Addr, f.TotalInboundPackets, f.TotalInboundBytes, f.TotalOutboundPackets, f.TotalOutboundBytes)
 	}
 	return ""
+}
+
+// MarshalJSON returns local addr port and peer addr post.
+func (f *HostFlow) MarshalJSON() ([]byte, error) {
+	type jsonHostFlow struct {
+		Mode                 ConnMode `json:"mode"`
+		LocalAddrPort        string   `json:"local_addr_port"`
+		PeerAddrPort         string   `json:"peer_addr_port"`
+		TotalInboundPackets  int64    `json:"total_inbound_packets"`
+		TotalInboundBytes    int64    `json:"total_inbound_bytes"`
+		TotalOutboundPackets int64    `json:"total_outbound_packets"`
+		TotalOutboundBytes   int64    `json:"total_outbound_bytes"`
+	}
+	switch f.Mode {
+	case ConnActive:
+		return json.Marshal(jsonHostFlow{
+			Mode:                 f.Mode,
+			LocalAddrPort:        "localhost:many",
+			PeerAddrPort:         net.JoinHostPort(f.Addr, f.Port),
+			TotalInboundPackets:  f.TotalInboundPackets,
+			TotalInboundBytes:    f.TotalInboundBytes,
+			TotalOutboundPackets: f.TotalOutboundPackets,
+			TotalOutboundBytes:   f.TotalOutboundBytes,
+		})
+	case ConnPassive:
+		return json.Marshal(jsonHostFlow{
+			Mode:                 f.Mode,
+			LocalAddrPort:        net.JoinHostPort("localhost", f.Port),
+			PeerAddrPort:         f.Addr + ":many",
+			TotalInboundPackets:  f.TotalInboundPackets,
+			TotalInboundBytes:    f.TotalInboundBytes,
+			TotalOutboundPackets: f.TotalOutboundPackets,
+			TotalOutboundBytes:   f.TotalOutboundBytes,
+		})
+	case ConnOther:
+		return json.Marshal(jsonHostFlow{})
+	}
+	return nil, errors.New("unreachable code")
 }
 
 // HostFlows represents a group of host flow by unique key.

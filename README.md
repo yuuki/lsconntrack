@@ -48,23 +48,19 @@ localhost:80         <--    10.0.2.11:80			38	    8574	    34	    32752
 ### filter by port
 
 ```shell
-$ lsconntrack --active 3306 11211
+$ lsconntrack --active --aport 3306 --aport 11211
 ```
 
 ### via stdin
 
 ```shell
-$ cat /proc/net/nf_conntrack | lsconntrack --stdin --active 3306 11211
-```
-
-```shell
-$ conntrack | lsconntrack --stdin --active 3306 11211
+$ cat /proc/net/nf_conntrack | lsconntrack --stdin
 ```
 
 ### json format
 
 ```shell
-$ lsconntrack --json --active 3306 11211
+$ lsconntrack --json
 ```
 
 ## License

@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.3.0](https://github.com/yuuki/lsconntrack/compare/v0.2.0...v0.3.0) (2018-03-04)
+
+* Change json format [#10](https://github.com/yuuki/lsconntrack/pull/10) ([yuuki](https://github.com/yuuki))
+* Improve JSON output [#9](https://github.com/yuuki/lsconntrack/pull/9) ([yuuki](https://github.com/yuuki))
+
 ## [v0.2.0](https://github.com/yuuki/lsconntrack/compare/v0.1.2...v0.2.0) (2018-03-04)
 
 * Add --numeric option [#8](https://github.com/yuuki/lsconntrack/pull/8) ([yuuki](https://github.com/yuuki))

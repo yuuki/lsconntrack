@@ -152,7 +152,7 @@ func (c *CLI) PrintHostFlows(flows conntrack.HostFlows, numeric bool, mode connt
 			continue
 		}
 		if !numeric {
-			flow.Addr = netutil.ResolveAddr(flow.Addr)
+			flow.ReplaceLookupedName()
 		}
 		fmt.Fprintln(tw, flow)
 	}
@@ -163,7 +163,7 @@ func (c *CLI) PrintHostFlows(flows conntrack.HostFlows, numeric bool, mode connt
 func (c *CLI) PrintHostFlowsAsJSON(flows conntrack.HostFlows, numeric bool, mode conntrack.FlowDirection) error {
 	for key, flow := range flows {
 		if !numeric {
-			flow.Addr = netutil.ResolveAddr(flow.Addr)
+			flow.ReplaceLookupedName()
 		}
 		if flow.Mode&mode == 0 {
 			delete(flows, key)

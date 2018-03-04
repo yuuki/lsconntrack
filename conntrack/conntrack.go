@@ -81,7 +81,7 @@ type HostFlow struct {
 	Stat *HostFlowStat
 }
 
-// String returns the string respresentation of HostFlow.
+// String returns the string representation of HostFlow.
 func (f *HostFlow) String() string {
 	if f.Mode == FlowActive {
 		return fmt.Sprintf("localhost:many\t --> \t%s:%s \t %s", f.Addr, f.Port, f.Stat)
@@ -89,6 +89,11 @@ func (f *HostFlow) String() string {
 		return fmt.Sprintf("localhost:%s\t <-- \t%s:many \t %s", f.Port, f.Addr, f.Stat)
 	}
 	return ""
+}
+
+// ReplaceLookupedName replaces f.Addr into lookuped name.
+func (f *HostFlow) ReplaceLookupedName() {
+	f.Addr = netutil.ResolveAddr(f.Addr)
 }
 
 // MarshalJSON returns local addr port and peer addr post.

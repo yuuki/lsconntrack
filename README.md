@@ -84,8 +84,8 @@ $ lsconntrack --json | jq -r -M '.'
       "Port": "many"
     },
     "peer": {
-      "Addr": "10.0.100.1",
-      "Port": "3306"
+      "addr": "10.0.100.1",
+      "port": "3306"
     },
     "stat": {
       "total_inbound_packets": 1491,
@@ -97,12 +97,12 @@ $ lsconntrack --json | jq -r -M '.'
   {
     "direction": "passive",
     "local": {
-      "Addr": "localhost",
-      "Port": "80"
+      "addr": "localhost",
+      "port": "80"
     },
     "peer": {
-      "Addr": "10.0.200.1",
-      "Port": "many"
+      "addr": "10.0.200.1",
+      "port": "many"
     },
     "stat": {
       "total_inbound_packets": 1491,

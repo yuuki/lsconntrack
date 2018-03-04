@@ -76,8 +76,8 @@ func (s *HostFlowStat) String() string {
 
 // AddrPort are <addr>:<port>
 type AddrPort struct {
-	Addr string
-	Port string
+	Addr string `json:"addr"`
+	Port string `json:"port"`
 }
 
 // String returns the string representation of the AddrPort.

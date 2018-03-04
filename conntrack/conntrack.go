@@ -87,55 +87,26 @@ func (a *AddrPort) String() string {
 
 // HostFlow represents a `host flow`.
 type HostFlow struct {
-	direction FlowDirection
-	local     *AddrPort
-	peer      *AddrPort
-	stat      *HostFlowStat
+	Direction FlowDirection `json:"direction"`
+	Local     *AddrPort     `json:"local"`
+	Peer      *AddrPort     `json:"peer"`
+	Stat      *HostFlowStat `json:"stat"`
 	uniqKey   string
 }
 
 // HasDirection returns whether .
 func (f *HostFlow) HasDirection(dire FlowDirection) bool {
-	return f.direction&dire == 0
+	return f.Direction&dire == 0
 }
 
 // String returns the string representation of HostFlow.
 func (f *HostFlow) String() string {
-	return fmt.Sprintf("%s\t --> \t%s \t%s", f.local, f.peer, f.stat)
+	return fmt.Sprintf("%s\t --> \t%s \t%s", f.Local, f.Peer, f.Stat)
 }
 
 // ReplaceLookupedName replaces f.Addr into lookuped name.
 func (f *HostFlow) ReplaceLookupedName() {
-	f.peer.Addr = netutil.ResolveAddr(f.peer.Addr)
-}
-
-// MarshalJSON returns local addr port and peer addr post.
-func (f *HostFlow) MarshalJSON() ([]byte, error) {
-	type jsonHostFlow struct {
-		Mode          FlowDirection `json:"mode"`
-		LocalAddrPort string        `json:"local_addr_port"`
-		PeerAddrPort  string        `json:"peer_addr_port"`
-		Stat          *HostFlowStat `json:"stat"`
-	}
-	switch f.direction {
-	case FlowActive:
-		return json.Marshal(jsonHostFlow{
-			Mode:          f.direction,
-			LocalAddrPort: f.local.String(),
-			PeerAddrPort:  f.peer.String(),
-			Stat:          f.stat,
-		})
-	case FlowPassive:
-		return json.Marshal(jsonHostFlow{
-			Mode:          f.direction,
-			LocalAddrPort: f.local.String(),
-			PeerAddrPort:  f.peer.String(),
-			Stat:          f.stat,
-		})
-	case FlowUnknown:
-		return json.Marshal(jsonHostFlow{})
-	}
-	return nil, errors.New("unreachable code")
+	f.Peer.Addr = netutil.ResolveAddr(f.Peer.Addr)
 }
 
 // HostFlows represents a group of host flow by unique key.
@@ -147,17 +118,17 @@ func (hf HostFlows) insert(flow *HostFlow) {
 		hf[key] = flow
 		return
 	}
-	switch flow.direction {
+	switch flow.Direction {
 	case FlowActive:
-		hf[key].stat.TotalInboundPackets += flow.stat.TotalInboundPackets
-		hf[key].stat.TotalInboundBytes += flow.stat.TotalInboundBytes
-		hf[key].stat.TotalOutboundPackets += flow.stat.TotalOutboundPackets
-		hf[key].stat.TotalOutboundBytes += flow.stat.TotalOutboundBytes
+		hf[key].Stat.TotalInboundPackets += flow.Stat.TotalInboundPackets
+		hf[key].Stat.TotalInboundBytes += flow.Stat.TotalInboundBytes
+		hf[key].Stat.TotalOutboundPackets += flow.Stat.TotalOutboundPackets
+		hf[key].Stat.TotalOutboundBytes += flow.Stat.TotalOutboundBytes
 	case FlowPassive:
-		hf[key].stat.TotalInboundPackets += flow.stat.TotalInboundPackets
-		hf[key].stat.TotalInboundBytes += flow.stat.TotalInboundBytes
-		hf[key].stat.TotalOutboundPackets += flow.stat.TotalOutboundPackets
-		hf[key].stat.TotalOutboundBytes += flow.stat.TotalOutboundBytes
+		hf[key].Stat.TotalInboundPackets += flow.Stat.TotalInboundPackets
+		hf[key].Stat.TotalInboundBytes += flow.Stat.TotalInboundBytes
+		hf[key].Stat.TotalOutboundPackets += flow.Stat.TotalOutboundPackets
+		hf[key].Stat.TotalOutboundBytes += flow.Stat.TotalOutboundBytes
 	}
 	return
 }
@@ -202,10 +173,10 @@ func (f *flow) toHostFlow(localAddrs []string, fports FilterPorts) *HostFlow {
 		return nil
 	case FlowActive:
 		return &HostFlow{
-			direction: FlowActive,
-			local:     &AddrPort{Addr: "localhost", Port: "many"},
-			peer:      &AddrPort{Addr: addr, Port: port},
-			stat: &HostFlowStat{
+			Direction: FlowActive,
+			Local:     &AddrPort{Addr: "localhost", Port: "many"},
+			Peer:      &AddrPort{Addr: addr, Port: port},
+			Stat: &HostFlowStat{
 				TotalInboundPackets:  f.replyPackets,
 				TotalInboundBytes:    f.replyBytes,
 				TotalOutboundPackets: f.originalPackets,
@@ -215,10 +186,10 @@ func (f *flow) toHostFlow(localAddrs []string, fports FilterPorts) *HostFlow {
 		}
 	case FlowPassive:
 		return &HostFlow{
-			direction: FlowPassive,
-			local:     &AddrPort{Addr: "localhost", Port: port},
-			peer:      &AddrPort{Addr: addr, Port: "many"},
-			stat: &HostFlowStat{
+			Direction: FlowPassive,
+			Local:     &AddrPort{Addr: "localhost", Port: port},
+			Peer:      &AddrPort{Addr: addr, Port: "many"},
+			Stat: &HostFlowStat{
 				TotalInboundPackets:  f.originalPackets,
 				TotalInboundBytes:    f.originalBytes,
 				TotalOutboundPackets: f.replyPackets,

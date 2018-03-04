@@ -70,7 +70,7 @@ type HostFlowStat struct {
 
 // String returns the string representation of the HostFlowStat.
 func (s *HostFlowStat) String() string {
-	return fmt.Sprintf("%d \t %d \t %d \t %d", s.TotalInboundPackets, s.TotalInboundBytes, s.TotalOutboundPackets, s.TotalOutboundBytes)
+	return fmt.Sprintf("%d \t%d \t%d \t%d", s.TotalInboundPackets, s.TotalInboundBytes, s.TotalOutboundPackets, s.TotalOutboundBytes)
 }
 
 // HostFlow represents a `host flow`.
@@ -84,9 +84,9 @@ type HostFlow struct {
 // String returns the string representation of HostFlow.
 func (f *HostFlow) String() string {
 	if f.Mode == FlowActive {
-		return fmt.Sprintf("localhost:many\t --> \t%s:%s \t %s", f.Addr, f.Port, f.Stat)
+		return fmt.Sprintf("localhost:many\t --> \t%s:%s \t%s", f.Addr, f.Port, f.Stat)
 	} else if f.Mode == FlowPassive {
-		return fmt.Sprintf("localhost:%s\t <-- \t%s:many \t %s", f.Port, f.Addr, f.Stat)
+		return fmt.Sprintf("localhost:%s\t <-- \t%s:many \t%s", f.Port, f.Addr, f.Stat)
 	}
 	return ""
 }

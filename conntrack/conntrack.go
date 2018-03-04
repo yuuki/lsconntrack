@@ -14,22 +14,26 @@ import (
 	"github.com/yuuki/lsconntrack/netutil"
 )
 
-type ConnMode int
+// FlowDirection are bitmask that represents both Active or Passive.
+type FlowDirection int
 
 const (
-	ConnOther ConnMode = 1 << iota
-	ConnActive
-	ConnPassive
+	// FlowUnknown are unknown flow.
+	FlowUnknown FlowDirection = 1 << iota
+	// FlowActive are 'active open'.
+	FlowActive
+	// FlowPassive are 'passive open'
+	FlowPassive
 )
 
 // MarshalJSON returns human readable `mode` format.
-func (c ConnMode) MarshalJSON() ([]byte, error) {
+func (c FlowDirection) MarshalJSON() ([]byte, error) {
 	switch c {
-	case ConnActive:
+	case FlowActive:
 		return json.Marshal("active")
-	case ConnPassive:
+	case FlowPassive:
 		return json.Marshal("passive")
-	case ConnOther:
+	case FlowUnknown:
 		return json.Marshal("unknown")
 	}
 	return nil, errors.New("unreachable code")
@@ -71,17 +75,17 @@ func (s *HostFlowStat) String() string {
 
 // HostFlow represents a `host flow`.
 type HostFlow struct {
-	Mode ConnMode
+	Mode FlowDirection
 	Addr string
 	Port string
 	Stat *HostFlowStat
 }
 
-// String returns the string respresentation of ConnStat.
+// String returns the string respresentation of HostFlow.
 func (f *HostFlow) String() string {
-	if f.Mode == ConnActive {
+	if f.Mode == FlowActive {
 		return fmt.Sprintf("localhost:many\t --> \t%s:%s \t %s", f.Addr, f.Port, f.Stat)
-	} else if f.Mode == ConnPassive {
+	} else if f.Mode == FlowPassive {
 		return fmt.Sprintf("localhost:%s\t <-- \t%s:many \t %s", f.Port, f.Addr, f.Stat)
 	}
 	return ""
@@ -90,27 +94,27 @@ func (f *HostFlow) String() string {
 // MarshalJSON returns local addr port and peer addr post.
 func (f *HostFlow) MarshalJSON() ([]byte, error) {
 	type jsonHostFlow struct {
-		Mode          ConnMode      `json:"mode"`
+		Mode          FlowDirection `json:"mode"`
 		LocalAddrPort string        `json:"local_addr_port"`
 		PeerAddrPort  string        `json:"peer_addr_port"`
 		Stat          *HostFlowStat `json:"stat"`
 	}
 	switch f.Mode {
-	case ConnActive:
+	case FlowActive:
 		return json.Marshal(jsonHostFlow{
 			Mode:          f.Mode,
 			LocalAddrPort: "localhost:many",
 			PeerAddrPort:  net.JoinHostPort(f.Addr, f.Port),
 			Stat:          f.Stat,
 		})
-	case ConnPassive:
+	case FlowPassive:
 		return json.Marshal(jsonHostFlow{
 			Mode:          f.Mode,
 			LocalAddrPort: net.JoinHostPort("localhost", f.Port),
 			PeerAddrPort:  f.Addr + ":many",
 			Stat:          f.Stat,
 		})
-	case ConnOther:
+	case FlowUnknown:
 		return json.Marshal(jsonHostFlow{})
 	}
 	return nil, errors.New("unreachable code")
@@ -126,12 +130,12 @@ func (hf HostFlows) insert(flow *HostFlow) {
 		return
 	}
 	switch flow.Mode {
-	case ConnActive:
+	case FlowActive:
 		hf[key].Stat.TotalInboundPackets += flow.Stat.TotalInboundPackets
 		hf[key].Stat.TotalInboundBytes += flow.Stat.TotalInboundBytes
 		hf[key].Stat.TotalOutboundPackets += flow.Stat.TotalOutboundPackets
 		hf[key].Stat.TotalOutboundBytes += flow.Stat.TotalOutboundBytes
-	case ConnPassive:
+	case FlowPassive:
 		hf[key].Stat.TotalInboundPackets += flow.Stat.TotalInboundPackets
 		hf[key].Stat.TotalInboundBytes += flow.Stat.TotalInboundBytes
 		hf[key].Stat.TotalOutboundPackets += flow.Stat.TotalOutboundPackets
@@ -152,34 +156,34 @@ func (hf HostFlows) MarshalJSON() ([]byte, error) {
 // toHostFlow converts into HostFlow.
 func (f *Flow) toHostFlow(localAddrs []string, fports FilterPorts) *HostFlow {
 	var (
-		mode       ConnMode
+		mode       FlowDirection
 		addr, port string
 	)
 	for _, localAddr := range localAddrs {
 		// not filter by ports on ActiveOpen connection if ports is empty
 		if f.OriginalSaddr == localAddr && (len(fports.Active) == 0 || contains(fports.Active, f.OriginalDport)) {
-			mode, addr, port = ConnActive, f.OriginalDaddr, f.OriginalDport
+			mode, addr, port = FlowActive, f.OriginalDaddr, f.OriginalDport
 			break
 		}
 		if f.ReplyDaddr == localAddr && (len(fports.Active) == 0 || contains(fports.Active, f.ReplySport)) {
-			mode, addr, port = ConnActive, f.ReplySaddr, f.ReplySport
+			mode, addr, port = FlowActive, f.ReplySaddr, f.ReplySport
 			break
 		}
 		if f.OriginalDaddr == localAddr && contains(fports.Passive, f.OriginalDport) {
-			mode, addr, port = ConnPassive, f.OriginalSaddr, f.OriginalDport // not OriginalSport
+			mode, addr, port = FlowPassive, f.OriginalSaddr, f.OriginalDport // not OriginalSport
 			break
 		}
 		if f.ReplySaddr == localAddr && contains(fports.Passive, f.ReplySport) {
-			mode, addr, port = ConnPassive, f.ReplyDaddr, f.ReplySport // not ReplyDport
+			mode, addr, port = FlowPassive, f.ReplyDaddr, f.ReplySport // not ReplyDport
 			break
 		}
 	}
 	switch mode {
-	case ConnOther:
+	case FlowUnknown:
 		return nil
-	case ConnActive:
+	case FlowActive:
 		return &HostFlow{
-			Mode: ConnActive,
+			Mode: FlowActive,
 			Addr: addr,
 			Port: port,
 			Stat: &HostFlowStat{
@@ -189,9 +193,9 @@ func (f *Flow) toHostFlow(localAddrs []string, fports FilterPorts) *HostFlow {
 				TotalOutboundBytes:   f.OriginalBytes,
 			},
 		}
-	case ConnPassive:
+	case FlowPassive:
 		return &HostFlow{
-			Mode: ConnPassive,
+			Mode: FlowPassive,
 			Addr: addr,
 			Port: port,
 			Stat: &HostFlowStat{

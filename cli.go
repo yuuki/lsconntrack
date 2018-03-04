@@ -84,15 +84,15 @@ func (c *CLI) Run(args []string) int {
 		return exitCodeOK
 	}
 
-	var mode conntrack.ConnMode
+	var mode conntrack.FlowDirection
 	if active {
-		mode |= conntrack.ConnActive
+		mode |= conntrack.FlowActive
 	}
 	if passive {
-		mode |= conntrack.ConnPassive
+		mode |= conntrack.FlowPassive
 	}
 	if !active && !passive {
-		mode = conntrack.ConnActive | conntrack.ConnPassive
+		mode = conntrack.FlowActive | conntrack.FlowPassive
 	}
 
 	var r io.Reader
@@ -113,7 +113,7 @@ func (c *CLI) Run(args []string) int {
 		r = f
 	}
 
-	if mode&conntrack.ConnPassive != 0 && len(passivePorts) == 0 {
+	if mode&conntrack.FlowPassive != 0 && len(passivePorts) == 0 {
 		var err error
 		passivePorts, err = netutil.LocalListeningPorts()
 		if err != nil {
@@ -143,7 +143,7 @@ func (c *CLI) Run(args []string) int {
 }
 
 // PrintHostFlows prints the host flows.
-func (c *CLI) PrintHostFlows(flows conntrack.HostFlows, numeric bool, mode conntrack.ConnMode) {
+func (c *CLI) PrintHostFlows(flows conntrack.HostFlows, numeric bool, mode conntrack.FlowDirection) {
 	// Format in tab-separated columns with a tab stop of 8.
 	tw := tabwriter.NewWriter(c.outStream, 0, 8, 0, '\t', 0)
 	fmt.Fprintln(tw, "Local Address:Port\t <--> \tPeer Address:Port \tInpkts \tInbytes \tOutpkts \tOutbytes")
@@ -160,7 +160,7 @@ func (c *CLI) PrintHostFlows(flows conntrack.HostFlows, numeric bool, mode connt
 }
 
 // PrintHostFlowsAsJSON prints the host flows as json format.
-func (c *CLI) PrintHostFlowsAsJSON(flows conntrack.HostFlows, numeric bool, mode conntrack.ConnMode) error {
+func (c *CLI) PrintHostFlowsAsJSON(flows conntrack.HostFlows, numeric bool, mode conntrack.FlowDirection) error {
 	for key, flow := range flows {
 		if !numeric {
 			flow.Addr = netutil.ResolveAddr(flow.Addr)

@@ -33,30 +33,30 @@ lsconntrack prints `host flows` (aggregated connection flows to the same source 
 
 ```shell
 $ lsconntrack -n
-Local Address:Port	 <--> 	Peer Address:Port 		Inpkts 	Inbytes     Outpkts Outbytes
-localhost:many       -->    10.0.1.10:3306		    5521792 123258667	5423865 282041045
-localhost:many       -->    10.0.1.11:3306		    58800   3062451	    58813   3061627
-localhost:many       -->    10.0.1.20:8080		    123     169638	    62      3580
-localhost:80         <--    10.0.2.10:80			23	    6416	    25	    25460
-localhost:80         <--    10.0.2.11:80			38	    8574	    34	    32752
+Local Address:Port   <-->   Peer Address:Port     Inpkts  Inbytes   Outpkts Outbytes
+localhost:many       -->    10.0.1.10:3306        5521792 123258667 5423865 282041045
+localhost:many       -->    10.0.1.11:3306        58800   3062451   58813   3061627
+localhost:many       -->    10.0.1.20:8080        123     169638    62      3580
+localhost:80         <--    10.0.2.10:80          23      6416      25      25460
+localhost:80         <--    10.0.2.11:80          38      8574      34      32752
 ```
 
 ```shell
 # Prints active open connections from localhost to destination hosts.
 $ lsconntrack --active
-Local Address:Port	 <--> 	Peer Address:Port 		Inpkts 	Inbytes     Outpkts Outbytes
-localhost:many       -->    10.0.1.10:3306		    5521792 123258667	5423865 282041045
-localhost:many       -->    10.0.1.11:3306		    58800   3062451	    58813   3061627
-localhost:many       -->    10.0.1.20:8080		    123     169638	    62      3580
+Local Address:Port   <-->   Peer Address:Port     Inpkts  Inbytes   Outpkts Outbytes
+localhost:many       -->    10.0.1.10:3306        5521792 123258667 5423865 282041045
+localhost:many       -->    10.0.1.11:3306        58800   3062451   58813   3061627
+localhost:many       -->    10.0.1.20:8080        123     169638    62      3580
 ...
 ```
 
 ```shell
 # Prints passive open connections from destination hosts to localhost.
 $ lsconntrack --passive
-Local Address:Port	 <--> 	Peer Address:Port 		Inpkts 	Inbytes     Outpkts Outbytes
-localhost:80         <--    10.0.2.10:many			23	    6416	    25	    25460
-localhost:80         <--    10.0.2.11:many			38	    8574	    34	    32752
+Local Address:Port   <-->   Peer Address:Port   Inpkts  Inbytes   Outpkts Outbytes
+localhost:80         <--    10.0.2.10:many      23      6416      25      25460
+localhost:80         <--    10.0.2.11:many      38      8574      34      32752
 ...
 ```
 

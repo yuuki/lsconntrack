@@ -91,7 +91,6 @@ type HostFlow struct {
 	Local     *AddrPort     `json:"local"`
 	Peer      *AddrPort     `json:"peer"`
 	Stat      *HostFlowStat `json:"stat"`
-	uniqKey   string
 }
 
 // HasDirection returns whether .
@@ -109,11 +108,16 @@ func (f *HostFlow) ReplaceLookupedName() {
 	f.Peer.Addr = netutil.ResolveAddr(f.Peer.Addr)
 }
 
+// UniqKey returns the unique key for connections aggregation
+func (f *HostFlow) UniqKey() string {
+	return fmt.Sprintf("%d-%s-%s", f.Direction, f.Local, f.Peer)
+}
+
 // HostFlows represents a group of host flow by unique key.
 type HostFlows map[string]*HostFlow
 
 func (hf HostFlows) insert(flow *HostFlow) {
-	key := flow.uniqKey
+	key := flow.UniqKey()
 	if _, ok := hf[key]; !ok {
 		hf[key] = flow
 		return
@@ -167,7 +171,6 @@ func (f *flow) toHostFlow(localAddrs []string, fports FilterPorts) *HostFlow {
 			break
 		}
 	}
-	uniqKey := fmt.Sprintf("%d-%s", direction, net.JoinHostPort(addr, port))
 	switch direction {
 	case FlowUnknown:
 		return nil
@@ -182,7 +185,6 @@ func (f *flow) toHostFlow(localAddrs []string, fports FilterPorts) *HostFlow {
 				TotalOutboundPackets: f.originalPackets,
 				TotalOutboundBytes:   f.originalBytes,
 			},
-			uniqKey: uniqKey,
 		}
 	case FlowPassive:
 		return &HostFlow{
@@ -195,7 +197,6 @@ func (f *flow) toHostFlow(localAddrs []string, fports FilterPorts) *HostFlow {
 				TotalOutboundPackets: f.replyPackets,
 				TotalOutboundBytes:   f.replyBytes,
 			},
-			uniqKey: uniqKey,
 		}
 	}
 	return nil

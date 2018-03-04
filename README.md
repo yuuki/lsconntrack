@@ -75,7 +75,32 @@ $ cat /proc/net/nf_conntrack | lsconntrack --stdin
 ### JSON format
 
 ```shell
-$ lsconntrack --json
+$ lsconntrack --json | jq -r -M '.'
+[
+  {
+    "mode": "active",
+    "local_addr_port": "localhost:many",
+    "peer_addr_port": "10.0.100.1:3306",
+    "stat": {
+      "total_inbound_packets": 1491,
+      "total_inbound_bytes": 1480239,
+      "total_outbound_packets": 1537,
+      "total_outbound_bytes": 520613
+    }
+  },
+  {
+    "mode": "passive",
+    "local_addr_port": "localhost:80",
+    "peer_addr_port": "10.0.200.1:many",
+    "stat": {
+      "total_inbound_packets": 1491,
+      "total_inbound_bytes": 1480239,
+      "total_outbound_packets": 1537,
+      "total_outbound_bytes": 520613
+    },
+  },
+  ...
+]
 ```
 
 ## License

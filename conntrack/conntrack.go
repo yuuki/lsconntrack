@@ -2,6 +2,8 @@ package conntrack
 
 import (
 	"bufio"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -19,6 +21,19 @@ const (
 	ConnActive
 	ConnPassive
 )
+
+// MarshalJSON returns human readable `mode` format.
+func (c ConnMode) MarshalJSON() ([]byte, error) {
+	switch c {
+	case ConnActive:
+		return json.Marshal("active")
+	case ConnPassive:
+		return json.Marshal("passive")
+	case ConnOther:
+		return json.Marshal("unknown")
+	}
+	return nil, errors.New("unreachable code")
+}
 
 type FilterPorts struct {
 	Active  []string
@@ -41,25 +56,64 @@ type Flow struct {
 	ReplyBytes      int64
 }
 
-// HostFlow represents statistics of a connection to localhost or from localhost.
+// HostFlowStat represents statistics of a host flow.
+type HostFlowStat struct {
+	TotalInboundPackets  int64 `json:"total_inbound_packets"`
+	TotalInboundBytes    int64 `json:"total_inbound_bytes"`
+	TotalOutboundPackets int64 `json:"total_outbound_packets"`
+	TotalOutboundBytes   int64 `json:"total_outbound_bytes"`
+}
+
+// String returns the string representation of the HostFlowStat.
+func (s *HostFlowStat) String() string {
+	return fmt.Sprintf("%d \t %d \t %d \t %d", s.TotalInboundPackets, s.TotalInboundBytes, s.TotalOutboundPackets, s.TotalOutboundBytes)
+}
+
+// HostFlow represents a `host flow`.
 type HostFlow struct {
-	Mode                 ConnMode
-	Addr                 string `json:"addr"`
-	Port                 string `json:"port"`
-	TotalInboundPackets  int64  `json:"total_inbound_packets"`
-	TotalInboundBytes    int64  `json:"total_inbound_bytes"`
-	TotalOutboundPackets int64  `json:"total_outbound_packets"`
-	TotalOutboundBytes   int64  `json:"total_outbound_bytes"`
+	Mode ConnMode
+	Addr string
+	Port string
+	Stat *HostFlowStat
 }
 
 // String returns the string respresentation of ConnStat.
 func (f *HostFlow) String() string {
 	if f.Mode == ConnActive {
-		return fmt.Sprintf("localhost:many\t --> \t%s:%s \t%d\t%d\t%d\t%d", f.Addr, f.Port, f.TotalInboundPackets, f.TotalInboundBytes, f.TotalOutboundPackets, f.TotalOutboundBytes)
+		return fmt.Sprintf("localhost:many\t --> \t%s:%s \t %s", f.Addr, f.Port, f.Stat)
 	} else if f.Mode == ConnPassive {
-		return fmt.Sprintf("localhost:%s\t <-- \t%s:many \t%d\t%d\t%d\t%d", f.Port, f.Addr, f.TotalInboundPackets, f.TotalInboundBytes, f.TotalOutboundPackets, f.TotalOutboundBytes)
+		return fmt.Sprintf("localhost:%s\t <-- \t%s:many \t %s", f.Port, f.Addr, f.Stat)
 	}
 	return ""
+}
+
+// MarshalJSON returns local addr port and peer addr post.
+func (f *HostFlow) MarshalJSON() ([]byte, error) {
+	type jsonHostFlow struct {
+		Mode          ConnMode      `json:"mode"`
+		LocalAddrPort string        `json:"local_addr_port"`
+		PeerAddrPort  string        `json:"peer_addr_port"`
+		Stat          *HostFlowStat `json:"stat"`
+	}
+	switch f.Mode {
+	case ConnActive:
+		return json.Marshal(jsonHostFlow{
+			Mode:          f.Mode,
+			LocalAddrPort: "localhost:many",
+			PeerAddrPort:  net.JoinHostPort(f.Addr, f.Port),
+			Stat:          f.Stat,
+		})
+	case ConnPassive:
+		return json.Marshal(jsonHostFlow{
+			Mode:          f.Mode,
+			LocalAddrPort: net.JoinHostPort("localhost", f.Port),
+			PeerAddrPort:  f.Addr + ":many",
+			Stat:          f.Stat,
+		})
+	case ConnOther:
+		return json.Marshal(jsonHostFlow{})
+	}
+	return nil, errors.New("unreachable code")
 }
 
 // HostFlows represents a group of host flow by unique key.
@@ -73,17 +127,26 @@ func (hf HostFlows) insert(flow *HostFlow) {
 	}
 	switch flow.Mode {
 	case ConnActive:
-		hf[key].TotalInboundPackets += flow.TotalInboundPackets
-		hf[key].TotalInboundBytes += flow.TotalInboundBytes
-		hf[key].TotalOutboundPackets += flow.TotalOutboundPackets
-		hf[key].TotalOutboundBytes += flow.TotalOutboundBytes
+		hf[key].Stat.TotalInboundPackets += flow.Stat.TotalInboundPackets
+		hf[key].Stat.TotalInboundBytes += flow.Stat.TotalInboundBytes
+		hf[key].Stat.TotalOutboundPackets += flow.Stat.TotalOutboundPackets
+		hf[key].Stat.TotalOutboundBytes += flow.Stat.TotalOutboundBytes
 	case ConnPassive:
-		hf[key].TotalInboundPackets += flow.TotalInboundPackets
-		hf[key].TotalInboundBytes += flow.TotalInboundBytes
-		hf[key].TotalOutboundPackets += flow.TotalOutboundPackets
-		hf[key].TotalOutboundBytes += flow.TotalOutboundBytes
+		hf[key].Stat.TotalInboundPackets += flow.Stat.TotalInboundPackets
+		hf[key].Stat.TotalInboundBytes += flow.Stat.TotalInboundBytes
+		hf[key].Stat.TotalOutboundPackets += flow.Stat.TotalOutboundPackets
+		hf[key].Stat.TotalOutboundBytes += flow.Stat.TotalOutboundBytes
 	}
 	return
+}
+
+// MarshalJSON returns list formats not map.
+func (hf HostFlows) MarshalJSON() ([]byte, error) {
+	list := make([]HostFlow, 0, len(hf))
+	for _, f := range hf {
+		list = append(list, *f)
+	}
+	return json.Marshal(list)
 }
 
 // toHostFlow converts into HostFlow.
@@ -116,23 +179,27 @@ func (f *Flow) toHostFlow(localAddrs []string, fports FilterPorts) *HostFlow {
 		return nil
 	case ConnActive:
 		return &HostFlow{
-			Mode:                 ConnActive,
-			Addr:                 addr,
-			Port:                 port,
-			TotalInboundPackets:  f.ReplyPackets,
-			TotalInboundBytes:    f.ReplyBytes,
-			TotalOutboundPackets: f.OriginalPackets,
-			TotalOutboundBytes:   f.OriginalBytes,
+			Mode: ConnActive,
+			Addr: addr,
+			Port: port,
+			Stat: &HostFlowStat{
+				TotalInboundPackets:  f.ReplyPackets,
+				TotalInboundBytes:    f.ReplyBytes,
+				TotalOutboundPackets: f.OriginalPackets,
+				TotalOutboundBytes:   f.OriginalBytes,
+			},
 		}
 	case ConnPassive:
 		return &HostFlow{
-			Mode:                 ConnPassive,
-			Addr:                 addr,
-			Port:                 port,
-			TotalInboundPackets:  f.OriginalPackets,
-			TotalInboundBytes:    f.OriginalBytes,
-			TotalOutboundPackets: f.ReplyPackets,
-			TotalOutboundBytes:   f.ReplyBytes,
+			Mode: ConnPassive,
+			Addr: addr,
+			Port: port,
+			Stat: &HostFlowStat{
+				TotalInboundPackets:  f.OriginalPackets,
+				TotalInboundBytes:    f.OriginalBytes,
+				TotalOutboundPackets: f.ReplyPackets,
+				TotalOutboundBytes:   f.ReplyBytes,
+			},
 		}
 	}
 	return nil

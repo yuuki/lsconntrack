@@ -18,6 +18,7 @@ lsconntrack prints `host flows` (aggregated connection flows to the same source 
 - stdin support (combination with [conntrack-tools](http://conntrack-tools.netfilter.org/))
 - JSON support
 - TCP support only
+- TODO: streaming support
 
 ## Environment
 

@@ -100,7 +100,13 @@ func (f *HostFlow) HasDirection(dire FlowDirection) bool {
 
 // String returns the string representation of HostFlow.
 func (f *HostFlow) String() string {
-	return fmt.Sprintf("%s\t --> \t%s \t%s", f.Local, f.Peer, f.Stat)
+	switch f.Direction {
+	case FlowActive:
+		return fmt.Sprintf("%s\t --> \t%s \t%s", f.Local, f.Peer, f.Stat)
+	case FlowPassive:
+		return fmt.Sprintf("%s\t <-- \t%s \t%s", f.Local, f.Peer, f.Stat)
+	}
+	return ""
 }
 
 // ReplaceLookupedName replaces f.Addr into lookuped name.

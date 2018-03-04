@@ -74,12 +74,24 @@ func (s *HostFlowStat) String() string {
 	return fmt.Sprintf("%d \t%d \t%d \t%d", s.TotalInboundPackets, s.TotalInboundBytes, s.TotalOutboundPackets, s.TotalOutboundBytes)
 }
 
+// AddrPort are <addr>:<port>
+type AddrPort struct {
+	Addr string
+	Port string
+}
+
+// String returns the string representation of the AddrPort.
+func (a *AddrPort) String() string {
+	return net.JoinHostPort(a.Addr, a.Port)
+}
+
 // HostFlow represents a `host flow`.
 type HostFlow struct {
 	direction FlowDirection
-	addr      string
-	port      string
+	local     *AddrPort
+	peer      *AddrPort
 	stat      *HostFlowStat
+	uniqKey   string
 }
 
 // HasDirection returns whether .
@@ -89,18 +101,12 @@ func (f *HostFlow) HasDirection(dire FlowDirection) bool {
 
 // String returns the string representation of HostFlow.
 func (f *HostFlow) String() string {
-	switch f.direction {
-	case FlowActive:
-		return fmt.Sprintf("localhost:many\t --> \t%s:%s \t%s", f.addr, f.port, f.stat)
-	case FlowPassive:
-		return fmt.Sprintf("localhost:%s\t <-- \t%s:many \t%s", f.port, f.addr, f.stat)
-	}
-	return ""
+	return fmt.Sprintf("%s\t --> \t%s \t%s", f.local, f.peer, f.stat)
 }
 
 // ReplaceLookupedName replaces f.Addr into lookuped name.
 func (f *HostFlow) ReplaceLookupedName() {
-	f.addr = netutil.ResolveAddr(f.addr)
+	f.peer.Addr = netutil.ResolveAddr(f.peer.Addr)
 }
 
 // MarshalJSON returns local addr port and peer addr post.
@@ -115,15 +121,15 @@ func (f *HostFlow) MarshalJSON() ([]byte, error) {
 	case FlowActive:
 		return json.Marshal(jsonHostFlow{
 			Mode:          f.direction,
-			LocalAddrPort: "localhost:many",
-			PeerAddrPort:  net.JoinHostPort(f.addr, f.port),
+			LocalAddrPort: f.local.String(),
+			PeerAddrPort:  f.peer.String(),
 			Stat:          f.stat,
 		})
 	case FlowPassive:
 		return json.Marshal(jsonHostFlow{
 			Mode:          f.direction,
-			LocalAddrPort: net.JoinHostPort("localhost", f.port),
-			PeerAddrPort:  f.addr + ":many",
+			LocalAddrPort: f.local.String(),
+			PeerAddrPort:  f.peer.String(),
 			Stat:          f.stat,
 		})
 	case FlowUnknown:
@@ -136,7 +142,7 @@ func (f *HostFlow) MarshalJSON() ([]byte, error) {
 type HostFlows map[string]*HostFlow
 
 func (hf HostFlows) insert(flow *HostFlow) {
-	key := fmt.Sprintf("%d-%s", flow.direction, net.JoinHostPort(flow.addr, flow.port))
+	key := flow.uniqKey
 	if _, ok := hf[key]; !ok {
 		hf[key] = flow
 		return
@@ -190,32 +196,35 @@ func (f *flow) toHostFlow(localAddrs []string, fports FilterPorts) *HostFlow {
 			break
 		}
 	}
+	uniqKey := fmt.Sprintf("%d-%s", direction, net.JoinHostPort(addr, port))
 	switch direction {
 	case FlowUnknown:
 		return nil
 	case FlowActive:
 		return &HostFlow{
 			direction: FlowActive,
-			addr:      addr,
-			port:      port,
+			local:     &AddrPort{Addr: "localhost", Port: "many"},
+			peer:      &AddrPort{Addr: addr, Port: port},
 			stat: &HostFlowStat{
 				TotalInboundPackets:  f.replyPackets,
 				TotalInboundBytes:    f.replyBytes,
 				TotalOutboundPackets: f.originalPackets,
 				TotalOutboundBytes:   f.originalBytes,
 			},
+			uniqKey: uniqKey,
 		}
 	case FlowPassive:
 		return &HostFlow{
 			direction: FlowPassive,
-			addr:      addr,
-			port:      port,
+			local:     &AddrPort{Addr: "localhost", Port: port},
+			peer:      &AddrPort{Addr: addr, Port: "many"},
 			stat: &HostFlowStat{
 				TotalInboundPackets:  f.originalPackets,
 				TotalInboundBytes:    f.originalBytes,
 				TotalOutboundPackets: f.replyPackets,
 				TotalOutboundBytes:   f.replyBytes,
 			},
+			uniqKey: uniqKey,
 		}
 	}
 	return nil

@@ -143,12 +143,12 @@ func (c *CLI) Run(args []string) int {
 }
 
 // PrintHostFlows prints the host flows.
-func (c *CLI) PrintHostFlows(flows conntrack.HostFlows, numeric bool, mode conntrack.FlowDirection) {
+func (c *CLI) PrintHostFlows(flows conntrack.HostFlows, numeric bool, direction conntrack.FlowDirection) {
 	// Format in tab-separated columns with a tab stop of 8.
 	tw := tabwriter.NewWriter(c.outStream, 0, 8, 0, '\t', 0)
 	fmt.Fprintln(tw, "Local Address:Port\t <--> \tPeer Address:Port \tInpkts \tInbytes \tOutpkts \tOutbytes")
 	for _, flow := range flows {
-		if flow.Mode&mode == 0 {
+		if flow.HasDirection(direction) {
 			continue
 		}
 		if !numeric {
@@ -160,12 +160,12 @@ func (c *CLI) PrintHostFlows(flows conntrack.HostFlows, numeric bool, mode connt
 }
 
 // PrintHostFlowsAsJSON prints the host flows as json format.
-func (c *CLI) PrintHostFlowsAsJSON(flows conntrack.HostFlows, numeric bool, mode conntrack.FlowDirection) error {
+func (c *CLI) PrintHostFlowsAsJSON(flows conntrack.HostFlows, numeric bool, direction conntrack.FlowDirection) error {
 	for key, flow := range flows {
 		if !numeric {
 			flow.ReplaceLookupedName()
 		}
-		if flow.Mode&mode == 0 {
+		if flow.HasDirection(direction) {
 			delete(flows, key)
 		}
 	}

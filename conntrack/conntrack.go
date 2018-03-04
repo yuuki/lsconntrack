@@ -39,25 +39,26 @@ func (c FlowDirection) MarshalJSON() ([]byte, error) {
 	return nil, errors.New("unreachable code")
 }
 
+// FilterPorts are ports to filter output.
 type FilterPorts struct {
 	Active  []string
 	Passive []string
 }
 
-// Flow represents statistics of a connection to other host and port.
-type Flow struct {
-	OriginalSaddr   string
-	OriginalDaddr   string
-	OriginalSport   string
-	OriginalDport   string
-	OriginalPackets int64
-	OriginalBytes   int64
-	ReplySaddr      string
-	ReplyDaddr      string
-	ReplySport      string
-	ReplyDport      string
-	ReplyPackets    int64
-	ReplyBytes      int64
+// flow represents statistics of a connection to other host and port.
+type flow struct {
+	originalSaddr   string
+	originalDaddr   string
+	originalSport   string
+	originalDport   string
+	originalPackets int64
+	originalBytes   int64
+	replySaddr      string
+	replyDaddr      string
+	replySport      string
+	replyDport      string
+	replyPackets    int64
+	replyBytes      int64
 }
 
 // HostFlowStat represents statistics of a host flow.
@@ -75,25 +76,30 @@ func (s *HostFlowStat) String() string {
 
 // HostFlow represents a `host flow`.
 type HostFlow struct {
-	Mode FlowDirection
-	Addr string
-	Port string
-	Stat *HostFlowStat
+	direction FlowDirection
+	addr      string
+	port      string
+	stat      *HostFlowStat
+}
+
+// HasDirection returns whether .
+func (f *HostFlow) HasDirection(dire FlowDirection) bool {
+	return f.direction&dire == 0
 }
 
 // String returns the string representation of HostFlow.
 func (f *HostFlow) String() string {
-	if f.Mode == FlowActive {
-		return fmt.Sprintf("localhost:many\t --> \t%s:%s \t%s", f.Addr, f.Port, f.Stat)
-	} else if f.Mode == FlowPassive {
-		return fmt.Sprintf("localhost:%s\t <-- \t%s:many \t%s", f.Port, f.Addr, f.Stat)
+	if f.direction == FlowActive {
+		return fmt.Sprintf("localhost:many\t --> \t%s:%s \t%s", f.addr, f.port, f.stat)
+	} else if f.direction == FlowPassive {
+		return fmt.Sprintf("localhost:%s\t <-- \t%s:many \t%s", f.port, f.addr, f.stat)
 	}
 	return ""
 }
 
 // ReplaceLookupedName replaces f.Addr into lookuped name.
 func (f *HostFlow) ReplaceLookupedName() {
-	f.Addr = netutil.ResolveAddr(f.Addr)
+	f.addr = netutil.ResolveAddr(f.addr)
 }
 
 // MarshalJSON returns local addr port and peer addr post.
@@ -104,20 +110,20 @@ func (f *HostFlow) MarshalJSON() ([]byte, error) {
 		PeerAddrPort  string        `json:"peer_addr_port"`
 		Stat          *HostFlowStat `json:"stat"`
 	}
-	switch f.Mode {
+	switch f.direction {
 	case FlowActive:
 		return json.Marshal(jsonHostFlow{
-			Mode:          f.Mode,
+			Mode:          f.direction,
 			LocalAddrPort: "localhost:many",
-			PeerAddrPort:  net.JoinHostPort(f.Addr, f.Port),
-			Stat:          f.Stat,
+			PeerAddrPort:  net.JoinHostPort(f.addr, f.port),
+			Stat:          f.stat,
 		})
 	case FlowPassive:
 		return json.Marshal(jsonHostFlow{
-			Mode:          f.Mode,
-			LocalAddrPort: net.JoinHostPort("localhost", f.Port),
-			PeerAddrPort:  f.Addr + ":many",
-			Stat:          f.Stat,
+			Mode:          f.direction,
+			LocalAddrPort: net.JoinHostPort("localhost", f.port),
+			PeerAddrPort:  f.addr + ":many",
+			Stat:          f.stat,
 		})
 	case FlowUnknown:
 		return json.Marshal(jsonHostFlow{})
@@ -129,22 +135,22 @@ func (f *HostFlow) MarshalJSON() ([]byte, error) {
 type HostFlows map[string]*HostFlow
 
 func (hf HostFlows) insert(flow *HostFlow) {
-	key := fmt.Sprintf("%d-%s", flow.Mode, net.JoinHostPort(flow.Addr, flow.Port))
+	key := fmt.Sprintf("%d-%s", flow.direction, net.JoinHostPort(flow.addr, flow.port))
 	if _, ok := hf[key]; !ok {
 		hf[key] = flow
 		return
 	}
-	switch flow.Mode {
+	switch flow.direction {
 	case FlowActive:
-		hf[key].Stat.TotalInboundPackets += flow.Stat.TotalInboundPackets
-		hf[key].Stat.TotalInboundBytes += flow.Stat.TotalInboundBytes
-		hf[key].Stat.TotalOutboundPackets += flow.Stat.TotalOutboundPackets
-		hf[key].Stat.TotalOutboundBytes += flow.Stat.TotalOutboundBytes
+		hf[key].stat.TotalInboundPackets += flow.stat.TotalInboundPackets
+		hf[key].stat.TotalInboundBytes += flow.stat.TotalInboundBytes
+		hf[key].stat.TotalOutboundPackets += flow.stat.TotalOutboundPackets
+		hf[key].stat.TotalOutboundBytes += flow.stat.TotalOutboundBytes
 	case FlowPassive:
-		hf[key].Stat.TotalInboundPackets += flow.Stat.TotalInboundPackets
-		hf[key].Stat.TotalInboundBytes += flow.Stat.TotalInboundBytes
-		hf[key].Stat.TotalOutboundPackets += flow.Stat.TotalOutboundPackets
-		hf[key].Stat.TotalOutboundBytes += flow.Stat.TotalOutboundBytes
+		hf[key].stat.TotalInboundPackets += flow.stat.TotalInboundPackets
+		hf[key].stat.TotalInboundBytes += flow.stat.TotalInboundBytes
+		hf[key].stat.TotalOutboundPackets += flow.stat.TotalOutboundPackets
+		hf[key].stat.TotalOutboundBytes += flow.stat.TotalOutboundBytes
 	}
 	return
 }
@@ -159,63 +165,63 @@ func (hf HostFlows) MarshalJSON() ([]byte, error) {
 }
 
 // toHostFlow converts into HostFlow.
-func (f *Flow) toHostFlow(localAddrs []string, fports FilterPorts) *HostFlow {
+func (f *flow) toHostFlow(localAddrs []string, fports FilterPorts) *HostFlow {
 	var (
-		mode       FlowDirection
+		direction  FlowDirection
 		addr, port string
 	)
 	for _, localAddr := range localAddrs {
 		// not filter by ports on ActiveOpen connection if ports is empty
-		if f.OriginalSaddr == localAddr && (len(fports.Active) == 0 || contains(fports.Active, f.OriginalDport)) {
-			mode, addr, port = FlowActive, f.OriginalDaddr, f.OriginalDport
+		if f.originalSaddr == localAddr && (len(fports.Active) == 0 || contains(fports.Active, f.originalDport)) {
+			direction, addr, port = FlowActive, f.originalDaddr, f.originalDport
 			break
 		}
-		if f.ReplyDaddr == localAddr && (len(fports.Active) == 0 || contains(fports.Active, f.ReplySport)) {
-			mode, addr, port = FlowActive, f.ReplySaddr, f.ReplySport
+		if f.replyDaddr == localAddr && (len(fports.Active) == 0 || contains(fports.Active, f.replySport)) {
+			direction, addr, port = FlowActive, f.replySaddr, f.replySport
 			break
 		}
-		if f.OriginalDaddr == localAddr && contains(fports.Passive, f.OriginalDport) {
-			mode, addr, port = FlowPassive, f.OriginalSaddr, f.OriginalDport // not OriginalSport
+		if f.originalDaddr == localAddr && contains(fports.Passive, f.originalDport) {
+			direction, addr, port = FlowPassive, f.originalSaddr, f.originalDport // not OriginalSport
 			break
 		}
-		if f.ReplySaddr == localAddr && contains(fports.Passive, f.ReplySport) {
-			mode, addr, port = FlowPassive, f.ReplyDaddr, f.ReplySport // not ReplyDport
+		if f.replySaddr == localAddr && contains(fports.Passive, f.replySport) {
+			direction, addr, port = FlowPassive, f.replyDaddr, f.replySport // not ReplyDport
 			break
 		}
 	}
-	switch mode {
+	switch direction {
 	case FlowUnknown:
 		return nil
 	case FlowActive:
 		return &HostFlow{
-			Mode: FlowActive,
-			Addr: addr,
-			Port: port,
-			Stat: &HostFlowStat{
-				TotalInboundPackets:  f.ReplyPackets,
-				TotalInboundBytes:    f.ReplyBytes,
-				TotalOutboundPackets: f.OriginalPackets,
-				TotalOutboundBytes:   f.OriginalBytes,
+			direction: FlowActive,
+			addr:      addr,
+			port:      port,
+			stat: &HostFlowStat{
+				TotalInboundPackets:  f.replyPackets,
+				TotalInboundBytes:    f.replyBytes,
+				TotalOutboundPackets: f.originalPackets,
+				TotalOutboundBytes:   f.originalBytes,
 			},
 		}
 	case FlowPassive:
 		return &HostFlow{
-			Mode: FlowPassive,
-			Addr: addr,
-			Port: port,
-			Stat: &HostFlowStat{
-				TotalInboundPackets:  f.OriginalPackets,
-				TotalInboundBytes:    f.OriginalBytes,
-				TotalOutboundPackets: f.ReplyPackets,
-				TotalOutboundBytes:   f.ReplyBytes,
+			direction: FlowPassive,
+			addr:      addr,
+			port:      port,
+			stat: &HostFlowStat{
+				TotalInboundPackets:  f.originalPackets,
+				TotalInboundBytes:    f.originalBytes,
+				TotalOutboundPackets: f.replyPackets,
+				TotalOutboundBytes:   f.replyBytes,
 			},
 		}
 	}
 	return nil
 }
 
-func parseLine(line string) *Flow {
-	flow := &Flow{}
+func parseLine(line string) *flow {
+	flow := &flow{}
 	fields := strings.Fields(line)
 	if len(fields) == 0 {
 		log.Fatalf("unexpected line: %s\n", line)
@@ -233,61 +239,61 @@ func parseLine(line string) *Flow {
 	if strings.Contains(line, "[UNREPLIED]") {
 		// tcp      6 367755 ESTABLISHED src=10.0.0.1 dst=10.0.0.2 sport=3306 dport=38205 packets=1 bytes=52 [UNREPLIED] src=10.0.0.2 dst=10.0.0.1 sport=38205 dport=3306 packets=0 bytes=0 mark=0 secmark=0 use=1
 		i := 4
-		flow.OriginalSaddr = strings.Split(fields[i], "=")[1]
-		flow.OriginalDaddr = strings.Split(fields[i+1], "=")[1]
-		flow.OriginalSport = strings.Split(fields[i+2], "=")[1]
-		flow.OriginalDport = strings.Split(fields[i+3], "=")[1]
+		flow.originalSaddr = strings.Split(fields[i], "=")[1]
+		flow.originalDaddr = strings.Split(fields[i+1], "=")[1]
+		flow.originalSport = strings.Split(fields[i+2], "=")[1]
+		flow.originalDport = strings.Split(fields[i+3], "=")[1]
 		i = i + 4
 		if bytes {
-			flow.OriginalPackets, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
+			flow.originalPackets, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
 			i++
 		}
 		if packets {
-			flow.OriginalBytes, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
+			flow.originalBytes, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
 			i++
 		}
 		i = i + 1
-		flow.ReplySaddr = strings.Split(fields[i], "=")[1]
-		flow.ReplyDaddr = strings.Split(fields[i+1], "=")[1]
-		flow.ReplySport = strings.Split(fields[i+2], "=")[1]
-		flow.ReplyDport = strings.Split(fields[i+3], "=")[1]
+		flow.replySaddr = strings.Split(fields[i], "=")[1]
+		flow.replyDaddr = strings.Split(fields[i+1], "=")[1]
+		flow.replySport = strings.Split(fields[i+2], "=")[1]
+		flow.replyDport = strings.Split(fields[i+3], "=")[1]
 		i = i + 4
 		if packets {
-			flow.ReplyPackets, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
+			flow.replyPackets, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
 			i++
 		}
 		if bytes {
-			flow.ReplyBytes, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
+			flow.replyBytes, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
 			i++
 		}
 		return flow
 	} else if strings.Contains(line, "[ASSURED]") {
 		// tcp      6 5 CLOSE src=10.0.0.10 dst=10.0.0.11 sport=41143 dport=443 packets=3 bytes=164 src=10.0.0.11 dst=10.0.0.10 sport=443 dport=41143 packets=1 bytes=60 [ASSURED] mark=0 secmark=0 use=1
 		i := 4
-		flow.OriginalSaddr = strings.Split(fields[i], "=")[1]
-		flow.OriginalDaddr = strings.Split(fields[i+1], "=")[1]
-		flow.OriginalSport = strings.Split(fields[i+2], "=")[1]
-		flow.OriginalDport = strings.Split(fields[i+3], "=")[1]
+		flow.originalSaddr = strings.Split(fields[i], "=")[1]
+		flow.originalDaddr = strings.Split(fields[i+1], "=")[1]
+		flow.originalSport = strings.Split(fields[i+2], "=")[1]
+		flow.originalDport = strings.Split(fields[i+3], "=")[1]
 		i = i + 4
 		if packets {
-			flow.OriginalPackets, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
+			flow.originalPackets, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
 			i++
 		}
 		if bytes {
-			flow.OriginalBytes, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
+			flow.originalBytes, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
 			i++
 		}
-		flow.ReplySaddr = strings.Split(fields[i], "=")[1]
-		flow.ReplyDaddr = strings.Split(fields[i+1], "=")[1]
-		flow.ReplySport = strings.Split(fields[i+2], "=")[1]
-		flow.ReplyDport = strings.Split(fields[i+3], "=")[1]
+		flow.replySaddr = strings.Split(fields[i], "=")[1]
+		flow.replyDaddr = strings.Split(fields[i+1], "=")[1]
+		flow.replySport = strings.Split(fields[i+2], "=")[1]
+		flow.replyDport = strings.Split(fields[i+3], "=")[1]
 		i = i + 4
 		if packets {
-			flow.ReplyPackets, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
+			flow.replyPackets, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
 			i++
 		}
 		if bytes {
-			flow.ReplyBytes, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
+			flow.replyBytes, _ = strconv.ParseInt(strings.Split(fields[i], "=")[1], 10, 64)
 			i++
 		}
 		return flow

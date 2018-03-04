@@ -89,9 +89,10 @@ func (f *HostFlow) HasDirection(dire FlowDirection) bool {
 
 // String returns the string representation of HostFlow.
 func (f *HostFlow) String() string {
-	if f.direction == FlowActive {
+	switch f.direction {
+	case FlowActive:
 		return fmt.Sprintf("localhost:many\t --> \t%s:%s \t%s", f.addr, f.port, f.stat)
-	} else if f.direction == FlowPassive {
+	case FlowPassive:
 		return fmt.Sprintf("localhost:%s\t <-- \t%s:many \t%s", f.port, f.addr, f.stat)
 	}
 	return ""

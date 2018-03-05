@@ -9,6 +9,8 @@
 
 lsconntrack prints `host flows` (aggregated connection flows to the same source or destination ports) tracked by Linux netfilter conntrack and enables you to simply grasp the network relationship between localhost and other hosts.
 
+friend: [yuuki/lstf](https://github.com/yuuki/lstf)
+
 ## Features
 
 - Distinction of `active opens` and `passive opens`
